@@ -1,4 +1,4 @@
-﻿plugins {
+plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.androidx.security.crypto)
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
+    implementation(libs.jakarta.activation.api)
     implementation(libs.androidx.profileinstaller)
     implementation(libs.haze)
     implementation(libs.haze.materials)

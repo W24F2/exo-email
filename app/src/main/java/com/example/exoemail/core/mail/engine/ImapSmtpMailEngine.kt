@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.core.mail.engine
+package com.example.exoemail.core.mail.engine
 
 import com.example.exoemail.core.mail.AccountConfig
 import com.example.exoemail.core.mail.AttachmentMeta
@@ -19,8 +19,12 @@ import jakarta.mail.Session
 import jakarta.mail.Store
 import jakarta.mail.Transport
 import jakarta.mail.internet.InternetAddress
+import jakarta.mail.internet.MimeBodyPart
 import jakarta.mail.internet.MimeMessage
+import jakarta.mail.internet.MimeMultipart
 import jakarta.mail.internet.MimeUtility
+import jakarta.activation.DataHandler
+import jakarta.mail.util.ByteArrayDataSource
 import jakarta.mail.search.FlagTerm
 import jakarta.mail.search.MessageIDTerm
 import kotlinx.coroutines.Dispatchers
@@ -127,6 +131,104 @@ class ImapSmtpMailEngine : MailEngine {
             }
         }
 
+    override suspend fun fetchAttachment(
+        account: AccountConfig, folder: String, uid: Long, index: Int,
+    ): Result<ByteArray> = withContext(Dispatchers.IO) {
+        runCatching {
+            withFolder(account, folder, Folder.READ_ONLY) { _, f ->
+                val uidFolder = f as? jakarta.mail.UIDFolder
+                    ?: throw MessagingException("UIDFolder not supported")
+                val msg = uidFolder.getMessageByUID(uid)
+                    ?: throw MessagingException("Message $uid not found")
+                // Walk MIME tree collecting attachment parts in the same order
+                // extractBody() assigns AttachmentMeta.index; return the Nth one's bytes.
+                val parts = mutableListOf<Part>()
+                fun collect(part: Part) {
+                    val disp = part.disposition
+                    val fileName = runCatching { part.fileName }.getOrNull()
+                    val isAttachment = disp != null &&
+                        (disp.equals(Part.ATTACHMENT, true) ||
+                            (disp.equals(Part.INLINE, true) && !fileName.isNullOrEmpty()))
+                    if (isAttachment) { parts += part; return }
+                    when {
+                        part.isMimeType("multipart/*") -> {
+                            val mp = runCatching { part.content as? Multipart }.getOrNull() ?: return
+                            for (i in 0 until mp.count) collect(mp.getBodyPart(i))
+                        }
+                        part.isMimeType("message/rfc822") -> (part.content as? Part)?.let(::collect)
+                    }
+                }
+                collect(msg)
+                val target = parts.getOrNull(index)
+                    ?: throw MessagingException("Attachment $index not found (${parts.size} present)")
+                val stream = target.content as? java.io.InputStream
+                    ?: throw MessagingException("Attachment content unavailable")
+                stream.use { it.readBytes() }
+            }
+        }
+    }
+
+    override suspend fun moveMessage(
+        account: AccountConfig, folder: String, uid: Long, targetFolder: String,
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            store(account) { s ->
+                val src = s.getFolder(folder)
+                if (!src.exists()) throw MessagingException("Folder not found: $folder")
+                src.open(Folder.READ_WRITE)
+                try {
+                    val msg = (src as? jakarta.mail.UIDFolder)?.getMessageByUID(uid)
+                        ?: throw MessagingException("Message $uid not found")
+                    val dst = s.getFolder(targetFolder)
+                    if (!dst.exists()) throw MessagingException("Target folder not found: $targetFolder")
+                    dst.open(Folder.READ_WRITE)
+                    try {
+                        dst.appendMessages(arrayOf(msg))
+                        msg.setFlag(Flags.Flag.DELETED, true)
+                    } finally {
+                        runCatching { dst.close() }
+                    }
+                } finally {
+                    runCatching { src.expunge() }
+                    runCatching { src.close(false) }
+                }
+            }
+        }
+    }
+
+    override suspend fun deleteMessage(account: AccountConfig, folder: String, uid: Long): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                store(account) { s ->
+                    val f = s.getFolder(folder)
+                    if (!f.exists()) throw MessagingException("Folder not found: $folder")
+                    f.open(Folder.READ_WRITE)
+                    try {
+                        val msg = (f as? jakarta.mail.UIDFolder)?.getMessageByUID(uid)
+                            ?: throw MessagingException("Message $uid not found")
+                        // If already in a Trash-like folder, expunge in place;
+                        // otherwise copy to Trash first so it's recoverable server-side.
+                        val trash = listOf("Trash", "Deleted Items", "Deleted Messages", "Bin", "[Gmail]/Trash", "[Gmail]/Bin")
+                            .firstOrNull { name -> runCatching { s.getFolder(name).exists() }.getOrDefault(false) }
+                        val inTrash = folder.contains("trash", true) || folder.contains("deleted", true) || folder.equals("bin", true)
+                        if (trash != null && !inTrash) {
+                            val dst = s.getFolder(trash)
+                            dst.open(Folder.READ_WRITE)
+                            try {
+                                dst.appendMessages(arrayOf(msg))
+                            } finally {
+                                runCatching { dst.close() }
+                            }
+                        }
+                        msg.setFlag(Flags.Flag.DELETED, true)
+                    } finally {
+                        runCatching { f.expunge() }
+                        runCatching { f.close(false) }
+                    }
+                }
+            }
+        }
+
     override suspend fun send(account: AccountConfig, draft: OutgoingMail): Result<Unit> =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -141,9 +243,35 @@ class ImapSmtpMailEngine : MailEngine {
                         setRecipients(Message.RecipientType.BCC, draft.bcc.map { InternetAddress(it) }.toTypedArray())
                     }
                     subject = draft.subject
-                    setText(draft.body, "utf-8")
                     draft.inReplyTo?.let { setHeader("In-Reply-To", it) }
+                    draft.references?.let { setHeader("References", it) }
                     sentDate = java.util.Date()
+
+                    // Body + attachments: multipart/mixed when files present, else single part.
+                    if (draft.attachments.isEmpty()) {
+                        if (draft.isHtml) {
+                            setContent(draft.body, "text/html; charset=utf-8")
+                        } else {
+                            setText(draft.body, "utf-8")
+                        }
+                    } else {
+                        val mp = MimeMultipart("mixed")
+                        val bodyPart = MimeBodyPart().apply {
+                            if (draft.isHtml) setContent(draft.body, "text/html; charset=utf-8")
+                            else setText(draft.body, "utf-8")
+                        }
+                        mp.addBodyPart(bodyPart)
+                        draft.attachments.forEach { att ->
+                            mp.addBodyPart(MimeBodyPart().apply {
+                                setFileName(MimeUtility.encodeText(att.fileName))
+                                setDataHandler(
+                                    DataHandler(ByteArrayDataSource(att.bytes, att.mimeType))
+                                )
+                                disposition = Part.ATTACHMENT
+                            })
+                        }
+                        setContent(mp)
+                    }
                 }
                 val transport = session.getTransport("smtp")
                 transport.connect(account.smtp.host, account.smtp.port, account.username, account.password)
@@ -263,11 +391,15 @@ class ImapSmtpMailEngine : MailEngine {
         inlineImages.forEach { img ->
             htmlOut = htmlOut.replace("cid:${img.contentId}", "liquidimg://${img.contentId}")
         }
+        val refs = runCatching {
+            getHeader("References")?.firstOrNull()?.trim()
+        }.getOrNull()
         return MailBody(
             text = text.toString().ifBlank { htmlOut.replace(Regex("<[^>]+>"), " ") },
             html = htmlOut.ifBlank { null },
             attachments = attachments,
             inlineImages = inlineImages,
+            references = refs,
         )
     }
 }

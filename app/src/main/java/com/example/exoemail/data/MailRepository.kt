@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.data
+package com.example.exoemail.data
 
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
@@ -60,6 +60,50 @@ class MailRepository(
     }
 
     suspend fun deleteMessage(id: String) = db.messageDao().delete(id)
+
+    // ---- rich email features ----
+
+    /** Fetch a message body (lazy, on open). */
+    suspend fun fetchBody(config: AccountConfig, folder: String, uid: Long) =
+        engine.fetchBody(config, folder, uid)
+
+    /** Download a single attachment's bytes. */
+    suspend fun fetchAttachment(config: AccountConfig, folder: String, uid: Long, index: Int) =
+        engine.fetchAttachment(config, folder, uid, index)
+
+    /**
+     * Server-side move + local row update. Optimistic: update Room first, then
+     * best-effort IMAP move. Returns the engine Result for caller to surface errors.
+     */
+    suspend fun moveMessage(account: AccountEntity, password: String, messageId: String, targetFolder: String): Result<Unit> {
+        val m = db.messageDao().get(messageId) ?: return Result.failure(IllegalArgumentException("not found"))
+        // local: rewrite id (it embeds accountId:folder:uid) and set folder
+        val newId = "${m.accountId}:${targetFolder}:${m.uid}"
+        db.messageDao().delete(messageId)
+        db.messageDao().upsertAll(listOf(m.copy(id = newId, folder = targetFolder)))
+        // Re-key attachments so they still resolve under the new message id.
+        val atts = db.attachmentDao().forMessage(messageId)
+        if (atts.isNotEmpty()) {
+            db.attachmentDao().deleteForMessage(messageId)
+            db.attachmentDao().upsertAll(atts.map { it.copy(messageId = newId) })
+        }
+        return if (m.uid > 0) {
+            engine.moveMessage(accountConfig(account, password), m.folder, m.uid, targetFolder)
+        } else Result.success(Unit)
+    }
+
+    /**
+     * Server-side delete (to Trash + expunge) + local remove. Optimistic local
+     * delete first; engine call is best-effort.
+     */
+    suspend fun deleteMessageRemote(account: AccountEntity, password: String, messageId: String): Result<Unit> {
+        val m = db.messageDao().get(messageId) ?: return Result.failure(IllegalArgumentException("not found"))
+        db.messageDao().delete(messageId)
+        db.attachmentDao().deleteForMessage(messageId)
+        return if (m.uid > 0) {
+            engine.deleteMessage(accountConfig(account, password), m.folder, m.uid)
+        } else Result.success(Unit)
+    }
 
     fun accountConfig(account: AccountEntity, password: String) = AccountConfig(
         accountId = account.id,

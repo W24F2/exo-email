@@ -12,3 +12,8 @@ Domain terms used across the codebase and docs. Keep implementation details out.
 - **Flag** — IMAP message state (`\Seen` = read, `\Flagged` = starred). UI toggles write Room first, then best-effort `engine.setFlag` to the server.
 - **Exo Mail** — the app name and package (`com.example.exoemail`).
 - **Demo account** — debug-only seeded account (`demo@liquidmail.app`, `syncEnabled=false`) inserted by `DemoSeeder` so all screens are reachable without credentials.
+- **Conversation** — the set of messages sharing a `threadId` (IMAP `References`/`Message-ID` chain). Rendered together inside ThreadScreen; inbox rows stay flat.
+- **Attachment (file)** — a non-inline MIME part with a filename. Distinct from *inline image* (cid-referenced, rendered in body). Files can be downloaded, opened, saved, and attached on send.
+- **Organize action** — a server-side message move: Archive (→ Archive folder), Delete (→ Trash then expunge), Move (→ chosen folder), Spam. Local Room write first, best-effort IMAP COPY+STORE+EXPUNGE/MOVE.
+- **Snooze** — hide a message until a chosen time. Local-only (`snoozedUntil` timestamp); no server move. Reappears in inbox after the time passes.
+- **Reply / Forward** — Reply sets `In-Reply-To`+`References` headers, `Re:` subject, quoted body; Forward sets `Fwd:` subject, original body + attachments.

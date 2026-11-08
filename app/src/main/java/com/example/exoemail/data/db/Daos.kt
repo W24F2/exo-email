@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.data.db
+package com.example.exoemail.data.db
 
 import androidx.paging.PagingSource
 import androidx.room.Dao
@@ -126,4 +126,7 @@ interface AttachmentDao {
 
     @Query("DELETE FROM attachments WHERE messageId LIKE :accountId || ':%'")
     suspend fun deleteForAccount(accountId: String)
+
+    @Query("DELETE FROM attachments WHERE messageId = :messageId")
+    suspend fun deleteForMessage(messageId: String)
 }
