@@ -68,10 +68,10 @@ fun LiquidBackdrop(
     ) {
         // Haze source: blobs + gradient are what glass blurs
         Box(Modifier.fillMaxSize().hazeSource(state)) {
-            Blob(480.dp, (30 + driftX).dp, (-100 + driftY).dp, LiquidCyan, 0.20f)
-            Blob(540.dp, (170 + driftX2).dp, (430 + driftY).dp, LiquidViolet, 0.16f)
-            Blob(380.dp, (-60 - driftX).dp, (600 - driftY).dp, LiquidPink, 0.12f)
-            Blob(340.dp, (220 - driftX2).dp, (120 - driftY).dp, LiquidBlue, 0.10f)
+            Blob(480.dp, (30 + driftX).dp, (-100 + driftY).dp, LiquidCyan, 0.12f)
+            Blob(540.dp, (170 + driftX2).dp, (430 + driftY).dp, LiquidViolet, 0.10f)
+            Blob(380.dp, (-60 - driftX).dp, (600 - driftY).dp, LiquidPink, 0.08f)
+            Blob(340.dp, (220 - driftX2).dp, (120 - driftY).dp, LiquidBlue, 0.07f)
         }
         content()
     }

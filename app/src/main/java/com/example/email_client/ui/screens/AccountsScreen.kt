@@ -31,6 +31,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.email_client.LiquidMailApp
+import com.example.email_client.ui.components.GlassBackButton
 import com.example.email_client.ui.components.GlassButton
 import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.components.GlassTopBar
@@ -52,7 +53,13 @@ fun AccountsScreen(app: LiquidMailApp, onBack: () -> Unit, onAddAccount: () -> U
     LiquidBackdrop(haze = haze) {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { GlassTopBar(title = "Accounts", modifier = Modifier.statusBarsPadding()) },
+            topBar = {
+                GlassTopBar(
+                    title = "Accounts",
+                    modifier = Modifier.statusBarsPadding(),
+                    navigationIcon = { GlassBackButton(onBack) },
+                )
+            },
         ) { padding ->
             Column(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(20.dp),

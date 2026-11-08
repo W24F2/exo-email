@@ -19,7 +19,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
@@ -143,6 +145,18 @@ fun GlassTopBar(
         ),
         modifier = modifier,
     )
+}
+
+/** Frosted back button used on secondary screens (Thread, Compose, Accounts). */
+@Composable
+fun GlassBackButton(onBack: () -> Unit) {
+    IconButton(onClick = onBack) {
+        Icon(
+            Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = "Back",
+            tint = MaterialTheme.colorScheme.onBackground,
+        )
+    }
 }
 
 @Composable

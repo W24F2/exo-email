@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.email_client.LiquidMailApp
+import com.example.email_client.ui.components.GlassBackButton
 import com.example.email_client.ui.components.GlassButton
 import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.components.GlassTopBar
@@ -52,6 +53,7 @@ fun ThreadScreen(
                 GlassTopBar(
                     title = message?.subject ?: "",
                     modifier = Modifier.statusBarsPadding(),
+                    navigationIcon = { GlassBackButton(onBack) },
                 )
             },
         ) { padding ->

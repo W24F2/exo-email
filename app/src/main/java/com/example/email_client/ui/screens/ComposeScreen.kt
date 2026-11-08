@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.email_client.LiquidMailApp
+import com.example.email_client.ui.components.GlassBackButton
 import com.example.email_client.ui.components.GlassButton
 import com.example.email_client.ui.components.GlassShape
 import com.example.email_client.ui.components.GlassTopBar
@@ -66,7 +67,13 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, onBack: () -> Unit) {
     LiquidBackdrop(haze = haze) {
         Scaffold(
             containerColor = Color.Transparent,
-            topBar = { GlassTopBar(title = "New message", modifier = Modifier.statusBarsPadding()) },
+            topBar = {
+                GlassTopBar(
+                    title = "New message",
+                    modifier = Modifier.statusBarsPadding(),
+                    navigationIcon = { GlassBackButton(onBack) },
+                )
+            },
         ) { padding ->
             Column(
                 modifier = Modifier

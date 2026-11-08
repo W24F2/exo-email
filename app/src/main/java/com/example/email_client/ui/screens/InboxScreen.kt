@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -46,7 +48,7 @@ import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.inbox.InboxViewModel
 import com.example.email_client.ui.inbox.InboxViewModelFactory
 import com.example.email_client.ui.theme.LiquidPink
-import com.example.email_client.ui.theme.LocalCoolGradient
+import com.example.email_client.ui.theme.LocalAccentGradient
 import com.example.email_client.ui.theme.OnAccent
 import com.example.email_client.ui.theme.TextSecondary
 import com.example.email_client.ui.theme.TextTertiary
@@ -177,7 +179,7 @@ internal fun InboxRow(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(LocalCoolGradient.current)
+                .background(LocalAccentGradient.current)
                 .padding(1.5.dp),
         ) {
             Box(
@@ -201,18 +203,28 @@ internal fun InboxRow(
                     fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Normal,
                     modifier = Modifier.weight(1f),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium,
                 )
-                Text(formatDate(date), color = TextTertiary, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    formatDate(date),
+                    color = if (!read) MaterialTheme.colorScheme.primary else TextTertiary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
             Text(
-                subject,
-                fontWeight = if (!read) FontWeight.Medium else FontWeight.Normal,
+                subject.ifBlank { snippet },
+                fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Medium,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onBackground,
+                style = MaterialTheme.typography.bodyMedium,
             )
-            Text(
-                snippet, color = TextSecondary, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
-            )
+            if (subject.isNotBlank() && snippet.isNotBlank()) {
+                Text(
+                    snippet, color = TextSecondary, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
         IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {
             Icon(
