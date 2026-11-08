@@ -2,36 +2,43 @@ package com.example.email_client.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Base - deep-space backdrop, never pure black
-val SpaceBase = Color(0xFF060810)
-val SpaceElevated = Color(0xFF0B1020)
-val SpaceDeep = Color(0xFF04060C)
+// Semantic palette - used as fallback / accents when dynamic color is unavailable.
+// Values chosen to be calm and legible on both light and dark surfaces.
 
-// Light mode base
-val LightBase = Color(0xFFF8FAFC)
-val LightElevated = Color(0xFFFFFFFF)
-val LightDeep = Color(0xFFEFF4F8)
+val BrandCyan = Color(0xFF0891B2)
+val BrandViolet = Color(0xFF7C3AED)
+val BrandPink = Color(0xFFDB2777)
+val BrandTeal = Color(0xFF0D9488)
+val BrandBlue = Color(0xFF2563EB)
 
-// Liquid accents - iridescent cyan -> violet -> pink
-val LiquidCyan = Color(0xFF6FE7E8)
-val LiquidTeal = Color(0xFF4FD0C5)
-val LiquidViolet = Color(0xFF9B7BFF)
-val LiquidPink = Color(0xFFFF7AD9)
-val LiquidBlue = Color(0xFF5B8CFF)
+// Dark scheme seeds (used when wallpaper-based dynamic color is off / unavailable)
+val DarkPrimary = Color(0xFF8FD8E8)
+val DarkOnPrimary = Color(0xFF003640)
+val DarkSecondary = Color(0xFFC0B1F0)
+val DarkOnSecondary = Color(0xFF25165B)
+val DarkTertiary = Color(0xFFF2B8DC)
+val DarkOnTertiary = Color(0xFF4A1030)
+val DarkBackground = Color(0xFF0E1116)
+val DarkSurface = Color(0xFF161B22)
+val DarkSurfaceVariant = Color(0xFF1F2630)
+val DarkOnBackground = Color(0xFFE6E9EF)
+val DarkOnSurface = Color(0xFFE6E9EF)
+val DarkOnSurfaceVariant = Color(0xFFB9C2CE)
+val DarkOutline = Color(0xFF5A6472)
+val DarkError = Color(0xFFFF8A80)
 
-// Glass fills/strokes (applied with alpha)
-val GlassFill = Color(0xFFFFFFFF)
-val GlassStroke = Color(0xFFFFFFFF)
-val GlassSpecular = Color(0xFFFFFFFF)
-
-// Dark text
-val TextPrimary = Color(0xFFF0F4FA)
-val TextSecondary = Color(0xB3C2D2E8)
-val TextTertiary = Color(0x80AABAD4)
-val OnAccent = Color(0xFF041018)
-
-// Light mode text
-val LightTextPrimary = Color(0xFF1A2332)
-val LightTextSecondary = Color(0xB31A2332)
-val LightTextTertiary = Color(0x801A2332)
-val LightOnAccent = Color(0xFF041018)
+// Light scheme seeds
+val LightPrimary = Color(0xFF006A78)
+val LightOnPrimary = Color(0xFFFFFFFF)
+val LightSecondary = Color(0xFF5A4E9E)
+val LightOnSecondary = Color(0xFFFFFFFF)
+val LightTertiary = Color(0xFFB0307A)
+val LightOnTertiary = Color(0xFFFFFFFF)
+val LightBackground = Color(0xFFFBFCFE)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFF0F3F7)
+val LightOnBackground = Color(0xFF1A2332)
+val LightOnSurface = Color(0xFF1A2332)
+val LightOnSurfaceVariant = Color(0xFF4A5568)
+val LightOutline = Color(0xFF9AA5B1)
+val LightError = Color(0xFFDC2626)

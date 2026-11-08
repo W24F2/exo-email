@@ -1,35 +1,21 @@
 package com.example.email_client.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import com.example.email_client.ui.theme.LocalIsDark
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -39,92 +25,33 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import com.example.email_client.ui.theme.GlassFill
-import com.example.email_client.ui.theme.GlassStroke
-import com.example.email_client.ui.theme.LocalAccentGradient
-import com.example.email_client.ui.theme.OnAccent
-import com.example.email_client.ui.theme.TextSecondary
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
-import dev.chrisbanes.haze.hazeSource
-import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
-import dev.chrisbanes.haze.materials.HazeMaterials
 
-/** Corner-radius scale for the whole app: 28dp surfaces, 24dp fields, pill buttons. */
+/** Corner-radius scale used across custom surfaces. */
 object GlassShape {
-    val Surface = RoundedCornerShape(28.dp)
-    val Field = RoundedCornerShape(20.dp)
-    val Chip = RoundedCornerShape(16.dp)
+    val Surface = RoundedCornerShape(20.dp)
+    val Field = RoundedCornerShape(14.dp)
+    val Chip = RoundedCornerShape(12.dp)
     val Pill = RoundedCornerShape(50)
 }
 
-/**
- * Liquid-glass fill: vertical white gradient + 1px gradient border + top specular.
- * Apply on top of a [hazeEffect] surface for real backdrop blur.
- */
-fun Modifier.glass(
-    shape: Shape = GlassShape.Surface,
-    tintAlpha: Float = 0.10f,
-    dark: Boolean = true,
-): Modifier = this
-    .clip(shape)
-    .background(
-        Brush.verticalGradient(
-            listOf(
-                if (dark) GlassFill.copy(alpha = tintAlpha + 0.09f)
-                else Color.Black.copy(alpha = tintAlpha * 0.4f),
-                if (dark) GlassFill.copy(alpha = tintAlpha * 0.55f)
-                else Color.Black.copy(alpha = tintAlpha * 0.2f),
-            )
-        )
-    )
-    .border(
-        1.dp,
-        Brush.verticalGradient(
-            listOf(
-                if (dark) GlassStroke.copy(alpha = 0.55f)
-                else Color.Black.copy(alpha = 0.08f),
-                if (dark) GlassStroke.copy(alpha = 0.10f)
-                else Color.Black.copy(alpha = 0.02f),
-            )
-        ),
-        shape,
-    )
-
-/** Frosted surface that blurs whatever the [HazeState] source drew behind it. */
-@OptIn(ExperimentalHazeMaterialsApi::class)
-@Composable
-fun Modifier.liquidGlass(
-    haze: HazeState?,
-    shape: Shape = GlassShape.Surface,
-    tintAlpha: Float = 0.10f,
-): Modifier = if (haze == null) {
-    this.glass(shape, tintAlpha, dark = LocalIsDark.current)
-} else {
-    this
-        .clip(shape)
-        .hazeEffect(
-            state = haze,
-            style = HazeMaterials.ultraThin(containerColor = MaterialTheme.colorScheme.surface),
-        )
-        .glass(shape, tintAlpha)
-}
-
+/** Elevated card surface — replaces glass(). */
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    haze: HazeState? = null,
-    shape: Shape = GlassShape.Surface,
-    tintAlpha: Float = 0.10f,
-    content: @Composable BoxScope.() -> Unit,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(modifier = modifier.liquidGlass(haze, shape, tintAlpha), content = content)
+    Card(
+        modifier = modifier,
+        shape = GlassShape.Surface,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        content = content,
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,7 +67,10 @@ fun GlassTopBar(
         title = {
             androidx.compose.foundation.layout.Column {
                 Text(title, style = MaterialTheme.typography.titleLarge)
-                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = TextSecondary) }
+                subtitle?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         },
         navigationIcon = navigationIcon,
@@ -153,7 +83,6 @@ fun GlassTopBar(
     )
 }
 
-/** Frosted back button used on secondary screens (Thread, Compose, Accounts). */
 @Composable
 fun GlassBackButton(onBack: () -> Unit) {
     IconButton(onClick = onBack) {
@@ -170,24 +99,16 @@ fun GlassFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit = {
-        Icon(Icons.Filled.Edit, contentDescription = "Compose", tint = OnAccent)
+        Icon(Icons.Filled.Edit, contentDescription = "Compose", tint = MaterialTheme.colorScheme.onPrimary)
     },
 ) {
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier,
         shape = GlassShape.Pill,
-        containerColor = Color.Transparent,
-        contentColor = OnAccent,
-        elevation = FloatingActionButtonDefaults.elevation(0.dp),
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(LocalAccentGradient.current),
-            contentAlignment = Alignment.Center,
-        ) { content() }
-    }
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+    ) { content() }
 }
 
 @Composable
@@ -197,19 +118,13 @@ fun GlassButton(
     enabled: Boolean = true,
     label: String,
 ) {
-    val shape = GlassShape.Pill
-    Box(
-        modifier = modifier
-            .clip(shape)
-            .background(
-                if (enabled) LocalAccentGradient.current
-                else Brush.linearGradient(listOf(Color(0x33FFFFFF), Color(0x22FFFFFF)))
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 28.dp, vertical = 14.dp),
-        contentAlignment = Alignment.Center,
+    androidx.compose.material3.Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier,
+        shape = GlassShape.Pill,
     ) {
-        Text(label, color = if (enabled) OnAccent else TextSecondary, style = MaterialTheme.typography.labelLarge)
+        Text(label)
     }
 }
 
@@ -220,61 +135,33 @@ fun GlassSearchBar(
     modifier: Modifier = Modifier,
     placeholder: String = "Search mail",
 ) {
-    BasicTextField(
+    TextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(
-            color = MaterialTheme.colorScheme.onBackground,
-        ),
-        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        decorationBox = { innerTextField ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(40.dp)
-                    .clip(GlassShape.Pill)
-                    .background(GlassFill.copy(alpha = if (LocalIsDark.current) 0.08f else 0.5f))
-                    .border(
-                        1.dp,
-                        Brush.verticalGradient(
-                            listOf(
-                                if (LocalIsDark.current) GlassStroke.copy(alpha = 0.25f)
-                                else Color.Black.copy(alpha = 0.06f),
-                                if (LocalIsDark.current) GlassStroke.copy(alpha = 0.06f)
-                                else Color.Black.copy(alpha = 0.02f),
-                            )
-                        ),
-                        GlassShape.Pill,
-                    )
-                    .padding(horizontal = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    Icons.Filled.Search,
-                    contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Box(Modifier.weight(1f).padding(horizontal = 8.dp)) {
-                    if (value.isEmpty()) {
-                        Text(placeholder, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    innerTextField()
-                }
-                if (value.isNotEmpty()) {
-                    Icon(
-                        Icons.Filled.Close,
-                        contentDescription = "Clear search",
-                        tint = TextSecondary,
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clickable { onValueChange("") },
-                    )
+        placeholder = {
+            Text(placeholder, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        leadingIcon = {
+            Icon(Icons.Filled.Search, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        },
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onValueChange("") }) {
+                    Icon(Icons.Filled.Close, contentDescription = "Clear search",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         },
+        shape = GlassShape.Pill,
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent,
+        ),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = ImeAction.Search),
         modifier = modifier.fillMaxWidth(),
     )
 }

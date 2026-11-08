@@ -124,6 +124,9 @@ class ImapSmtpMailEngine : MailEngine {
                     if (draft.cc.isNotEmpty()) {
                         setRecipients(Message.RecipientType.CC, draft.cc.map { InternetAddress(it) }.toTypedArray())
                     }
+                    if (draft.bcc.isNotEmpty()) {
+                        setRecipients(Message.RecipientType.BCC, draft.bcc.map { InternetAddress(it) }.toTypedArray())
+                    }
                     subject = draft.subject
                     setText(draft.body, "utf-8")
                     draft.inReplyTo?.let { setHeader("In-Reply-To", it) }

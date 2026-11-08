@@ -43,11 +43,11 @@ interface MessageDao {
     fun pagingFolder(accountId: String, folder: String): PagingSource<Int, MessageEntity>
 
     @Query(
-        "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'INBOX' " +
+        "SELECT * FROM messages WHERE accountId = :accountId " +
             "AND (:q = '' OR subject LIKE '%' || :q || '%' OR senderName LIKE '%' || :q || '%' OR sender LIKE '%' || :q || '%' OR snippet LIKE '%' || :q || '%') " +
             "ORDER BY date DESC"
     )
-    fun searchInbox(accountId: String, q: String): PagingSource<Int, MessageEntity>
+    fun searchAll(accountId: String, q: String): PagingSource<Int, MessageEntity>
 
     @Query("SELECT * FROM messages WHERE id = :id")
     suspend fun get(id: String): MessageEntity?
@@ -63,6 +63,12 @@ interface MessageDao {
 
     @Query("UPDATE messages SET bodyPath = :path WHERE id = :id")
     suspend fun setBodyPath(id: String, path: String)
+
+    @Query("UPDATE messages SET body = :body WHERE id = :id")
+    suspend fun setBody(id: String, body: String)
+
+    @Query("DELETE FROM messages WHERE id = :id")
+    suspend fun delete(id: String)
 
     @Query("SELECT MAX(uid) FROM messages WHERE accountId = :accountId AND folder = 'INBOX'")
     suspend fun maxUid(accountId: String): Long?
@@ -84,6 +90,12 @@ interface MessageDao {
             "ORDER BY date DESC"
     )
     fun pagingDrafts(accountId: String): PagingSource<Int, MessageEntity>
+
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'INBOX' AND isRead = 0 " +
+            "ORDER BY date DESC"
+    )
+    fun pagingUnread(accountId: String): PagingSource<Int, MessageEntity>
 
     @Query("UPDATE messages SET folder = :folder WHERE id = :id")
     suspend fun moveTo(id: String, folder: String)

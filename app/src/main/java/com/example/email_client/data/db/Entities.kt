@@ -51,6 +51,8 @@ data class MessageEntity(
     val hasAttachments: Boolean,
     val isDraft: Boolean = false,
     val bodyPath: String?,
+    /** Inline body for drafts (and optionally cached bodies later). Null for fetched mail. */
+    val body: String? = null,
 )
 
 @Entity(tableName = "attachments", primaryKeys = ["messageId", "idx"])

@@ -21,7 +21,6 @@ import com.example.email_client.ui.screens.SentScreen
 import com.example.email_client.ui.screens.StarredScreen
 import com.example.email_client.ui.screens.ThreadScreen
 import com.example.email_client.ui.shell.LiquidShell
-import dev.chrisbanes.haze.HazeState
 import kotlinx.coroutines.flow.first
 
 @Composable
@@ -58,9 +57,16 @@ fun AppNavHost(app: LiquidMailApp) {
         }
     }
 
-    val haze = remember { HazeState() }
     var query by remember { mutableStateOf("") }
     val currentTab = backStack.firstOrNull() ?: OnboardingRoute
+
+    // Resolve the active account's initial for the avatar once accounts load.
+    val accountInitial by produceState<String>(initialValue = "") {
+        val accounts = app.database.accountDao().observeAll().first()
+        val activeId = app.settings.activeAccountId.first()
+        val active = accounts.find { it.id == activeId } ?: accounts.firstOrNull()
+        value = active?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: ""
+    }
 
     NavDisplay(
         backStack = backStack,
@@ -71,16 +77,17 @@ fun AppNavHost(app: LiquidMailApp) {
             }
             entry<InboxRoute> {
                 LiquidShell(
-                    haze = haze, title = "Mail",
+                    title = "Mail",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
                     InboxScreen(
-                        app = app, haze = haze, query = query,
+                        app = app,
+                        query = query,
                         accountsExist = accountsExist,
                         onOpenMessage = { navigate(ThreadRoute(it)) },
                     )
@@ -88,55 +95,55 @@ fun AppNavHost(app: LiquidMailApp) {
             }
             entry<StarredRoute> {
                 LiquidShell(
-                    haze = haze, title = "Starred",
+                    title = "Starred",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
-                    StarredScreen(app = app, haze = haze, onOpenMessage = { navigate(ThreadRoute(it)) })
+                    StarredScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
             }
             entry<SentRoute> {
                 LiquidShell(
-                    haze = haze, title = "Sent",
+                    title = "Sent",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
-                    SentScreen(app = app, haze = haze, onOpenMessage = { navigate(ThreadRoute(it)) })
+                    SentScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
             }
             entry<DraftsRoute> {
                 LiquidShell(
-                    haze = haze, title = "Drafts",
+                    title = "Drafts",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
-                    DraftsScreen(app = app, haze = haze, onOpenMessage = { navigate(ComposeRoute()) })
+                    DraftsScreen(app = app, onOpenDraft = { navigate(ComposeRoute(draftId = it)) })
                 }
             }
             entry<FoldersRoute> {
                 LiquidShell(
-                    haze = haze, title = "Folders",
+                    title = "Folders",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
                     FoldersScreen(
-                        app = app, haze = haze,
+                        app = app,
                         onOpenFolder = { navigate(FolderRoute(it)) },
                         accountsExist = accountsExist,
                     )
@@ -144,26 +151,26 @@ fun AppNavHost(app: LiquidMailApp) {
             }
             entry<FolderRoute> { r ->
                 LiquidShell(
-                    haze = haze, title = r.folder,
+                    title = r.folder,
                     query = query, onQueryChange = { query = it },
                     activeTab = FoldersRoute, onTab = { switchTab(it as Route) },
                     onAvatar = { switchTab(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "",
+                    accountInitial = accountInitial,
                 ) {
-                    FolderScreen(app = app, haze = haze, folder = r.folder, onOpenMessage = { navigate(ThreadRoute(it)) })
+                    FolderScreen(app = app, folder = r.folder, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
             }
             entry<AccountsRoute> {
                 LiquidShell(
-                    haze = haze, title = "Accounts",
+                    title = "Accounts",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
                     onAvatar = { },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
-                    accountInitial = "A",
+                    accountInitial = accountInitial,
                 ) {
                     AccountsScreen(app = app, onBack = back, onAddAccount = { navigate(OnboardingRoute) })
                 }
@@ -172,7 +179,7 @@ fun AppNavHost(app: LiquidMailApp) {
                 ThreadScreen(app = app, messageId = r.messageId, onBack = back, onReply = { navigate(ComposeRoute(replyTo = it)) })
             }
             entry<ComposeRoute> { r ->
-                ComposeScreen(app = app, replyTo = r.replyTo, onBack = back)
+                ComposeScreen(app = app, replyTo = r.replyTo, draftId = r.draftId, onBack = back)
             }
         }
     )

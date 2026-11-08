@@ -15,4 +15,6 @@ data object SettingsRoute : Route
 
 // Pushed detail routes
 data class ThreadRoute(val messageId: String) : Route
-data class ComposeRoute(val replyTo: String? = null) : Route
+
+/** replyTo = sender address for replies; draftId = Room message id for draft resume. */
+data class ComposeRoute(val replyTo: String? = null, val draftId: String? = null) : Route

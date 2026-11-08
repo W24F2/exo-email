@@ -75,8 +75,6 @@ dependencies {
     implementation(libs.angus.mail)
     implementation(libs.angus.activation)
     implementation(libs.androidx.profileinstaller)
-    implementation(libs.haze)
-    implementation(libs.haze.materials)
     implementation(libs.androidx.core.ktx)
     debugImplementation(libs.compose.ui.tooling)
 

@@ -24,10 +24,11 @@ class MailRepository(
 
     fun inboxPager(accountId: String) = pager { db.messageDao().pagingFolder(accountId, "INBOX") }
     fun folderPager(accountId: String, folder: String) = pager { db.messageDao().pagingFolder(accountId, folder) }
-    fun searchInbox(accountId: String, query: String) = pager { db.messageDao().searchInbox(accountId, query) }
+    fun searchAll(accountId: String, query: String) = pager { db.messageDao().searchAll(accountId, query) }
     fun starredPager(accountId: String) = pager { db.messageDao().pagingStarred(accountId) }
     fun sentPager(accountId: String) = pager { db.messageDao().pagingSent(accountId) }
     fun draftsPager(accountId: String) = pager { db.messageDao().pagingDrafts(accountId) }
+    fun unreadPager(accountId: String) = pager { db.messageDao().pagingUnread(accountId) }
 
     suspend fun account(id: String) = db.accountDao().get(id)
     suspend fun message(id: String) = db.messageDao().get(id)
@@ -45,9 +46,20 @@ class MailRepository(
                 senderName = "Draft", recipients = to, date = System.currentTimeMillis(),
                 snippet = body.take(140), isRead = true, isStarred = false,
                 hasAttachments = false, isDraft = true, bodyPath = null,
+                body = body,
             )
         ))
     }
+
+    suspend fun updateDraft(id: String, to: String, subject: String, body: String) {
+        val existing = db.messageDao().get(id) ?: return
+        db.messageDao().upsertAll(listOf(existing.copy(
+            recipients = to, subject = subject, body = body,
+            snippet = body.take(140), date = System.currentTimeMillis(),
+        )))
+    }
+
+    suspend fun deleteMessage(id: String) = db.messageDao().delete(id)
 
     fun accountConfig(account: AccountEntity, password: String) = AccountConfig(
         accountId = account.id,

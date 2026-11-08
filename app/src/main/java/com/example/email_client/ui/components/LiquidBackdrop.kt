@@ -1,106 +1,19 @@
 package com.example.email_client.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.unit.dp
-import com.example.email_client.ui.theme.LiquidBlue
-import com.example.email_client.ui.theme.LiquidCyan
-import com.example.email_client.ui.theme.LiquidPink
-import com.example.email_client.ui.theme.LiquidViolet
-import com.example.email_client.ui.theme.LightBase
-import com.example.email_client.ui.theme.LightDeep
-import com.example.email_client.ui.theme.SpaceBase
-import com.example.email_client.ui.theme.SpaceDeep
-import com.example.email_client.ui.theme.LocalIsDark
-import androidx.compose.ui.graphics.Color
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeSource
 
 /**
- * Animated "liquid" backdrop: drifting blurred colour blobs over a vertical
- * space gradient. Also the [hazeSource] that glass surfaces blur against.
+ * Root container for every screen. Replaces the old animated LiquidBackdrop.
+ * Just a themed background — no blur, no drifting blobs (perf-first).
  */
 @Composable
-fun LiquidBackdrop(
-    haze: HazeState? = null,
+fun ScreenBackground(
+    modifier: Modifier = Modifier,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    val state = haze ?: remember { HazeState() }
-    val transition = rememberInfiniteTransition(label = "liquid")
-    val driftX by transition.animateFloat(
-        initialValue = -70f, targetValue = 70f,
-        animationSpec = infiniteRepeatable(tween(16000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftX",
-    )
-    val driftY by transition.animateFloat(
-        initialValue = -50f, targetValue = 50f,
-        animationSpec = infiniteRepeatable(tween(21000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftY",
-    )
-    val driftX2 by transition.animateFloat(
-        initialValue = 60f, targetValue = -60f,
-        animationSpec = infiniteRepeatable(tween(13000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "driftX2",
-    )
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    if (LocalIsDark.current) listOf(SpaceBase, SpaceDeep)
-                    else listOf(LightBase, LightDeep)
-                )
-            )
-    ) {
-        // Haze source: blobs + gradient are what glass blurs
-        Box(Modifier.fillMaxSize().hazeSource(state)) {
-            val blobAlpha = if (LocalIsDark.current) 1f else 0.5f
-            Blob(480.dp, (30 + driftX).dp, (-100 + driftY).dp, LiquidCyan, 0.12f * blobAlpha)
-            Blob(540.dp, (170 + driftX2).dp, (430 + driftY).dp, LiquidViolet, 0.10f * blobAlpha)
-            Blob(380.dp, (-60 - driftX).dp, (600 - driftY).dp, LiquidPink, 0.08f * blobAlpha)
-            Blob(340.dp, (220 - driftX2).dp, (120 - driftY).dp, LiquidBlue, 0.07f * blobAlpha)
-        }
-        content()
-    }
-}
-
-@Composable
-private fun Blob(
-    size: androidx.compose.ui.unit.Dp,
-    x: androidx.compose.ui.unit.Dp,
-    y: androidx.compose.ui.unit.Dp,
-    color: androidx.compose.ui.graphics.Color,
-    alpha: Float,
-) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .offset(x = x, y = y)
-            .clip(CircleShape)
-            .blur(60.dp)
-            .background(
-                Brush.radialGradient(
-                    listOf(color.copy(alpha = alpha), color.copy(alpha = 0f))
-                )
-            )
-    )
+    Box(modifier = modifier.fillMaxSize(), content = content)
 }

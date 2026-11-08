@@ -23,6 +23,7 @@ data class AttachmentMeta(val index: Int, val fileName: String, val mimeType: St
 data class OutgoingMail(
     val to: List<String>,
     val cc: List<String> = emptyList(),
+    val bcc: List<String> = emptyList(),
     val subject: String,
     val body: String,
     val inReplyTo: String? = null,

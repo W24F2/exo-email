@@ -9,6 +9,7 @@ import com.example.email_client.core.mail.OutgoingMail
 import com.example.email_client.core.mail.engine.MailEngineFactory
 import com.example.email_client.core.security.CredentialStore
 import com.example.email_client.data.MailRepository
+import com.example.email_client.data.db.MessageEntity
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
@@ -22,8 +23,17 @@ sealed interface ComposeState {
     data class Error(val message: String) : ComposeState
 }
 
+data class ComposeDraft(
+    val to: String = "",
+    val cc: String = "",
+    val bcc: String = "",
+    val subject: String = "",
+    val body: String = "",
+)
+
 class ComposeViewModel(
     private val app: LiquidMailApp,
+    private val draftId: String? = null,
     private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
     private val credentials: CredentialStore = CredentialStore(app),
     private val engine: MailEngine = MailEngineFactory.create(),
@@ -31,6 +41,24 @@ class ComposeViewModel(
 
     private val _state = MutableStateFlow<ComposeState>(ComposeState.Idle)
     val state: StateFlow<ComposeState> = _state
+
+    private val _draft = MutableStateFlow<ComposeDraft?>(null)
+    val draft: StateFlow<ComposeDraft?> = _draft
+
+    init {
+        if (draftId != null) {
+            viewModelScope.launch {
+                val m = app.database.messageDao().get(draftId)
+                if (m != null && m.isDraft) {
+                    _draft.value = ComposeDraft(
+                        to = m.recipients,
+                        subject = m.subject,
+                        body = m.body ?: "",
+                    )
+                }
+            }
+        }
+    }
 
     private suspend fun activeAccount(): Pair<com.example.email_client.data.db.AccountEntity, String>? {
         val activeId = app.settings.activeAccountId.first()
@@ -52,23 +80,26 @@ class ComposeViewModel(
                 repo.accountConfig(account, secret),
                 OutgoingMail(
                     to = toList,
-                    cc = ccList + bccList,
+                    cc = ccList,
+                    bcc = bccList,
                     subject = subject,
                     body = body,
                 ),
             ).onSuccess {
                 _state.value = ComposeState.Sent
+                // Remove draft if this was one
+                draftId?.let { runCatching { repo.deleteMessage(it) } }
                 // also save to Sent folder locally so Sent tab shows it
                 runCatching {
                     val id = "${account.id}:Sent:${System.currentTimeMillis()}"
                     app.database.messageDao().upsertAll(listOf(
-                        com.example.email_client.data.db.MessageEntity(
+                        MessageEntity(
                             id = id, accountId = account.id, folder = "Sent", uid = 0,
                             threadId = "", subject = subject, sender = account.email,
                             senderName = account.displayName, recipients = to,
                             date = System.currentTimeMillis(), snippet = body.take(140),
                             isRead = true, isStarred = false, hasAttachments = false,
-                            isDraft = false, bodyPath = null,
+                            isDraft = false, bodyPath = null, body = body,
                         )
                     ))
                 }
@@ -80,13 +111,20 @@ class ComposeViewModel(
     fun saveDraft(to: String, subject: String, body: String) {
         viewModelScope.launch {
             val (account, _) = activeAccount() ?: return@launch
-            repo.saveDraft(account.id, to, subject, body)
+            if (draftId != null) {
+                repo.updateDraft(draftId, to, subject, body)
+            } else {
+                repo.saveDraft(account.id, to, subject, body)
+            }
             _state.value = ComposeState.Saved
         }
     }
 }
 
-class ComposeViewModelFactory(private val app: LiquidMailApp) : ViewModelProvider.Factory {
+class ComposeViewModelFactory(
+    private val app: LiquidMailApp,
+    private val draftId: String? = null,
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = ComposeViewModel(app) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = ComposeViewModel(app, draftId) as T
 }

@@ -12,21 +12,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.draw.clip
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -39,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,17 +48,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.email_client.LiquidMailApp
-import com.example.email_client.data.db.MessageEntity
-import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.inbox.InboxFilter
 import com.example.email_client.ui.inbox.InboxViewModel
 import com.example.email_client.ui.inbox.InboxViewModelFactory
-import com.example.email_client.ui.theme.LiquidPink
-import com.example.email_client.ui.theme.LocalAccentGradient
-import com.example.email_client.ui.theme.LocalOnAccent
-import com.example.email_client.ui.theme.LocalTextSecondary
-import com.example.email_client.ui.theme.LocalTextTertiary
-import dev.chrisbanes.haze.HazeState
+import com.example.email_client.ui.theme.BrandPink
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -67,15 +60,11 @@ import java.util.Locale
 @Composable
 fun InboxScreen(
     app: LiquidMailApp,
-    haze: HazeState,
     query: String,
     accountsExist: Boolean,
     onOpenMessage: (String) -> Unit,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
-    val textSecondary = LocalTextSecondary.current
-    val textTertiary = LocalTextTertiary.current
-    val onAccent = LocalOnAccent.current
     val items = vm.messages(query).collectAsLazyPagingItems()
     val refreshing by vm.refreshing.collectAsState()
     val syncError by vm.syncError.collectAsState()
@@ -96,41 +85,42 @@ fun InboxScreen(
                 Column(modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)) {
                     Text(
                         greeting(),
-                        style = MaterialTheme.typography.titleLarge,
+                        style = MaterialTheme.typography.headlineSmall,
                         color = MaterialTheme.colorScheme.onBackground,
                     )
                     Text(
                         account?.email ?: "",
                         style = MaterialTheme.typography.bodySmall,
-                        color = textSecondary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            // Category filter chips
+            // Real filter chips: All / Unread / Starred
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     InboxFilter.entries.forEach { f ->
-                        val selected = filter == f
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(
-                                    if (selected) LocalAccentGradient.current
-                                    else Brush.horizontalGradient(listOf(Color.White.copy(alpha = 0.06f), Color.White.copy(alpha = 0.03f)))
+                        FilterChip(
+                            selected = filter == f,
+                            onClick = { filter = f },
+                            label = {
+                                Text(
+                                    when (f) {
+                                        InboxFilter.ALL -> "All"
+                                        InboxFilter.UNREAD -> "Unread"
+                                        InboxFilter.STARRED -> "Starred"
+                                    },
+                                    style = MaterialTheme.typography.labelMedium,
                                 )
-                                .clickable { filter = f }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                        ) {
-                            Text(
-                                f.name.lowercase().replaceFirstChar { it.uppercase() },
-                                color = if (selected) onAccent else textSecondary,
-                                style = MaterialTheme.typography.labelMedium,
-                            )
-                        }
+                            },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            ),
+                        )
                     }
                 }
             }
@@ -139,8 +129,8 @@ fun InboxScreen(
                 item {
                     Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                            Text("Loading your mail", color = textSecondary)
+                            CircularProgressIndicator()
+                            Text("Loading your mail", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -148,7 +138,11 @@ fun InboxScreen(
             if (items.itemCount == 0 && !refreshing) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(48.dp), contentAlignment = Alignment.Center) {
-                        GlassCard(haze = haze) {
+                        Surface(
+                            shape = MaterialTheme.shapes.large,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             Column(
                                 modifier = Modifier.padding(24.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -158,10 +152,13 @@ fun InboxScreen(
                                     when {
                                         !accountsExist -> "Add an account to get started"
                                         syncError != null -> "Couldn't load mail"
-                                        query.isBlank() -> "You're all caught up"
-                                        else -> "No matching messages"
+                                        query.isNotBlank() -> "No matching messages"
+                                        filter == InboxFilter.UNREAD -> "No unread messages"
+                                        filter == InboxFilter.STARRED -> "No starred messages"
+                                        else -> "You're all caught up"
                                     },
-                                    color = textSecondary,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodyMedium,
                                 )
                                 if (syncError != null) {
                                     Text(
@@ -170,7 +167,7 @@ fun InboxScreen(
                                         style = MaterialTheme.typography.bodySmall,
                                     )
                                     TextButton(onClick = { vm.refresh() }) { Text("Try again") }
-                                } else if (accountsExist && items.itemCount == 0 && query.isBlank()) {
+                                } else if (accountsExist && query.isBlank() && filter == InboxFilter.ALL) {
                                     TextButton(onClick = { vm.refresh() }) { Text("Sync now") }
                                 }
                             }
@@ -197,7 +194,7 @@ fun InboxScreen(
                 )
                 if (i < items.itemCount - 1) {
                     HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.06f),
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
@@ -227,9 +224,6 @@ internal fun InboxRow(
     onClick: () -> Unit,
     onStar: () -> Unit,
 ) {
-    val textSecondary = LocalTextSecondary.current
-    val textTertiary = LocalTextTertiary.current
-    val onAccent = LocalOnAccent.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -238,32 +232,27 @@ internal fun InboxRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Unread indicator dot
         Box(
             modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(if (!read) LiquidPink else Color.Transparent),
+                .background(if (!read) BrandPink else Color.Transparent),
         )
+        // Avatar
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(LocalAccentGradient.current)
-                .padding(1.5.dp),
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.07f))
-                        )
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(sender.take(1).uppercase(), color = onAccent, fontWeight = FontWeight.Bold)
-            }
+            Text(
+                sender.take(1).uppercase(),
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.labelLarge,
+            )
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -273,11 +262,13 @@ internal fun InboxRow(
                     modifier = Modifier.weight(1f),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     formatDate(date),
-                    color = if (!read) MaterialTheme.colorScheme.primary else textTertiary,
+                    color = if (!read) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -294,15 +285,18 @@ internal fun InboxRow(
                     Icon(
                         Icons.Filled.AttachFile,
                         contentDescription = "Has attachment",
-                        tint = textTertiary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(14.dp),
                     )
                 }
             }
             if (subject.isNotBlank() && snippet.isNotBlank()) {
                 Text(
-                    snippet, color = textSecondary, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
+                    snippet,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
@@ -310,7 +304,7 @@ internal fun InboxRow(
             Icon(
                 if (starred) Icons.Filled.Star else Icons.Outlined.Star,
                 contentDescription = "Star",
-                tint = if (starred) LiquidPink else textTertiary,
+                tint = if (starred) BrandPink else MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

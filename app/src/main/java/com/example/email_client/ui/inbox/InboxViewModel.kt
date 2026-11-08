@@ -23,12 +23,13 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-enum class InboxFilter { ALL, PRIMARY, SOCIAL, PROMOTIONS }
+enum class InboxFilter { ALL, UNREAD, STARRED }
 
 class InboxViewModel(
     private val app: LiquidMailApp,
     private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
     private val credentials: CredentialStore = CredentialStore(app),
+    private val engine: com.example.email_client.core.mail.MailEngine = MailEngineFactory.create(),
 ) : ViewModel() {
 
     val accounts: StateFlow<List<AccountEntity>> = repo.observeAccounts()
@@ -63,11 +64,12 @@ class InboxViewModel(
         .flatMapLatest { account ->
             if (account == null) flowOf(PagingData.empty())
             else {
-                val base = if (query.isBlank()) repo.inboxPager(account.id)
-                    else repo.searchInbox(account.id, query)
-                // Category filter applied client-side via PagingData.map would be complex;
-                // for now ALL/PRIMARY/SOCIAL/PROMOTIONS all read from INBOX (IMAP categories
-                // would need server-side X-GM-LABELS or similar - kept simple for IMAP-only scope).
+                val base = when {
+                    query.isNotBlank() -> repo.searchAll(account.id, query)
+                    filter == InboxFilter.UNREAD -> repo.unreadPager(account.id)
+                    filter == InboxFilter.STARRED -> repo.starredPager(account.id)
+                    else -> repo.inboxPager(account.id)
+                }
                 base.cachedIn(viewModelScope)
             }
         }
@@ -105,12 +107,32 @@ class InboxViewModel(
         }
     }
 
-    fun markRead(id: String) {
-        viewModelScope.launch { repo.markRead(id, true) }
+    /** Optimistic local update, then push the flag to the server best-effort. */
+    fun markRead(id: String, read: Boolean = true) {
+        viewModelScope.launch {
+            repo.markRead(id, read)
+            syncFlag(id) { acc, folder, uid, cfg -> engine.markRead(cfg, folder, uid, read) }
+        }
     }
 
     fun toggleStar(id: String, starred: Boolean) {
-        viewModelScope.launch { repo.setStarred(id, starred) }
+        viewModelScope.launch {
+            repo.setStarred(id, starred)
+            syncFlag(id) { acc, folder, uid, cfg -> engine.setStarred(cfg, folder, uid, starred) }
+        }
+    }
+
+    private suspend fun syncFlag(
+        id: String,
+        call: suspend (AccountEntity, String, Long, com.example.email_client.core.mail.AccountConfig) -> Result<Unit>,
+    ) {
+        val msg = app.database.messageDao().get(id) ?: return
+        val account = app.database.accountDao().get(msg.accountId) ?: return
+        val secret = runCatching { credentials.get(account.id)?.secret }.getOrNull() ?: return
+        val config = repo.accountConfig(account, secret)
+        // uid=0 rows (drafts/sent placeholders) have no server counterpart
+        if (msg.uid == 0L) return
+        runCatching { call(account, msg.folder, msg.uid, config) }
     }
 }
 
