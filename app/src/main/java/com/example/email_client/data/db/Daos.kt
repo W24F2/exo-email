@@ -15,6 +15,15 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE id = :id")
     suspend fun get(id: String): AccountEntity?
 
+    @Query("SELECT * FROM accounts WHERE email = :email LIMIT 1")
+    suspend fun byAddress(email: String): AccountEntity?
+
+    @Query("SELECT * FROM accounts ORDER BY email")
+    suspend fun all(): List<AccountEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(accounts: List<AccountEntity>)
+
     @Query("SELECT * FROM accounts ORDER BY email LIMIT 1")
     suspend fun first(): AccountEntity?
 
@@ -35,6 +44,9 @@ interface FolderDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertAll(folders: List<FolderEntity>)
+
+    @Query("DELETE FROM folders WHERE accountId = :accountId")
+    suspend fun deleteForAccount(accountId: String)
 }
 
 @Dao
@@ -99,6 +111,9 @@ interface MessageDao {
 
     @Query("UPDATE messages SET folder = :folder WHERE id = :id")
     suspend fun moveTo(id: String, folder: String)
+
+    @Query("DELETE FROM messages WHERE accountId = :accountId")
+    suspend fun deleteForAccount(accountId: String)
 }
 
 @Dao
@@ -108,4 +123,7 @@ interface AttachmentDao {
 
     @Query("SELECT * FROM attachments WHERE messageId = :messageId")
     suspend fun forMessage(messageId: String): List<AttachmentEntity>
+
+    @Query("DELETE FROM attachments WHERE messageId LIKE :accountId || ':%'")
+    suspend fun deleteForAccount(accountId: String)
 }

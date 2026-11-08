@@ -41,7 +41,35 @@ class LiquidMailApp : Application() {
                 com.example.email_client.data.DemoSeeder.seedIfEmpty(this@LiquidMailApp, database)
             }
         }
+        dedupeAccounts()
         scheduleSync()
+    }
+
+    /**
+     * Older builds could insert the same email twice (no dedupe on add), which
+     * split synced messages across two account ids — half of them pointed at an
+     * account with no stored credential, so bodies never loaded. Keep the
+     * account that actually has a credential (fall back to most-recently-synced)
+     * and drop the orphan's rows; the next sync repopulates under the keeper.
+     */
+    private fun dedupeAccounts() {
+        kotlinx.coroutines.runBlocking {
+            val accounts = database.accountDao().all()
+            val byEmail = accounts.groupBy { it.email.lowercase() }.filterValues { it.size > 1 }
+            if (byEmail.isEmpty()) return@runBlocking
+            val credentials = com.example.email_client.core.security.CredentialStore(this@LiquidMailApp)
+            for ((_, group) in byEmail) {
+                val keeper = group.firstOrNull { runCatching { credentials.get(it.id) }.getOrNull() != null }
+                    ?: group.maxByOrNull { it.lastSyncAt }
+                    ?: continue
+                for (loser in group.filter { it.id != keeper.id }) {
+                    database.messageDao().deleteForAccount(loser.id)
+                    database.folderDao().deleteForAccount(loser.id)
+                    database.attachmentDao().deleteForAccount(loser.id)
+                    database.accountDao().delete(loser.id)
+                }
+            }
+        }
     }
 
     private fun scheduleSync() {

@@ -34,27 +34,35 @@ class OnboardingViewModel(
 
     fun addAccount(email: String, password: String, providerId: String, imapHost: String, smtpHost: String) {
         val provider = ProviderCatalog.byId(providerId) ?: ProviderCatalog.all.last()
-        val account = AccountEntity(
-            id = UUID.randomUUID().toString(),
-            email = email.trim(),
-            providerId = provider.id,
-            displayName = provider.displayName,
-            imapHost = imapHost.ifBlank { provider.imap.host },
-            imapPort = provider.imap.port,
-            imapSsl = provider.imap.ssl,
-            smtpHost = smtpHost.ifBlank { provider.smtp.host },
-            smtpPort = provider.smtp.port,
-            smtpSsl = provider.smtp.ssl,
-            authType = provider.auth.name,
-        )
-        val config = AccountConfig(
-            accountId = account.id, email = account.email, username = account.email,
-            password = password,
-            imap = ServerSpec(account.imapHost, account.imapPort, account.imapSsl),
-            smtp = ServerSpec(account.smtpHost, account.smtpPort, account.smtpSsl),
-        )
         viewModelScope.launch {
             _state.value = OnboardingState.Testing
+            // Dedupe: reuse an existing account row for this email instead of
+            // creating a second one (which splits credentials/messages across ids).
+            val existing = app.database.accountDao().byAddress(email.trim())
+            val account = existing?.copy(
+                providerId = provider.id,
+                displayName = provider.displayName,
+                imapHost = imapHost.ifBlank { provider.imap.host }.ifBlank { existing.imapHost },
+                smtpHost = smtpHost.ifBlank { provider.smtp.host }.ifBlank { existing.smtpHost },
+            ) ?: AccountEntity(
+                id = UUID.randomUUID().toString(),
+                email = email.trim(),
+                providerId = provider.id,
+                displayName = provider.displayName,
+                imapHost = imapHost.ifBlank { provider.imap.host },
+                imapPort = provider.imap.port,
+                imapSsl = provider.imap.ssl,
+                smtpHost = smtpHost.ifBlank { provider.smtp.host },
+                smtpPort = provider.smtp.port,
+                smtpSsl = provider.smtp.ssl,
+                authType = provider.auth.name,
+            )
+            val config = AccountConfig(
+                accountId = account.id, email = account.email, username = account.email,
+                password = password,
+                imap = ServerSpec(account.imapHost, account.imapPort, account.imapSsl),
+                smtp = ServerSpec(account.smtpHost, account.smtpPort, account.smtpSsl),
+            )
             engine.testConnection(config)
                 .onSuccess {
                     credentials.save(account.id, Credentials(account.email, password, provider.auth.name))
