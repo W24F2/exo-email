@@ -5,18 +5,27 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.material3.Icon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -191,29 +200,59 @@ fun GlassSearchBar(
     modifier: Modifier = Modifier,
     placeholder: String = "Search mail",
 ) {
-    TextField(
+    BasicTextField(
         value = value,
         onValueChange = onValueChange,
-        placeholder = { Text(placeholder, color = TextSecondary) },
         singleLine = true,
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = GlassFill.copy(alpha = 0.10f),
-            unfocusedContainerColor = GlassFill.copy(alpha = 0.07f),
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            cursorColor = MaterialTheme.colorScheme.primary,
-            focusedTextColor = MaterialTheme.colorScheme.onBackground,
-            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
+        textStyle = MaterialTheme.typography.bodyMedium.copy(
+            color = MaterialTheme.colorScheme.onBackground,
         ),
-        shape = GlassShape.Field,
-        modifier = modifier
-            .fillMaxWidth()
-            .border(
-                1.dp,
-                Brush.verticalGradient(
-                    listOf(GlassStroke.copy(alpha = 0.35f), GlassStroke.copy(alpha = 0.10f))
-                ),
-                GlassShape.Field,
-            ),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .clip(GlassShape.Pill)
+                    .background(GlassFill.copy(alpha = 0.08f))
+                    .border(
+                        1.dp,
+                        Brush.verticalGradient(
+                            listOf(
+                                GlassStroke.copy(alpha = 0.25f),
+                                GlassStroke.copy(alpha = 0.06f),
+                            )
+                        ),
+                        GlassShape.Pill,
+                    )
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Box(Modifier.weight(1f).padding(horizontal = 8.dp)) {
+                    if (value.isEmpty()) {
+                        Text(placeholder, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+                    }
+                    innerTextField()
+                }
+                if (value.isNotEmpty()) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = "Clear search",
+                        tint = TextSecondary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable { onValueChange("") },
+                    )
+                }
+            }
+        },
+        modifier = modifier.fillMaxWidth(),
     )
 }

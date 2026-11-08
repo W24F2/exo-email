@@ -78,12 +78,12 @@ fun LiquidShell(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
                     .background(LocalAccentGradient.current)
                     .clickable { onAvatar() },
@@ -97,7 +97,7 @@ fun LiquidShell(
                 placeholder = "Search in $title",
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = 12.dp),
+                    .padding(start = 10.dp),
             )
         }
 
@@ -105,7 +105,7 @@ fun LiquidShell(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = 76.dp, bottom = 96.dp),
+                .padding(top = 60.dp, bottom = 96.dp),
         ) {
             Box(modifier = Modifier.fillMaxSize(), content = content)
             if (!accountsExist) {
