@@ -1,5 +1,6 @@
 package com.example.email_client.ui.screens
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,7 +34,7 @@ fun FolderScreen(
     val items = vm.folderMessages(account!!.id, folder).collectAsLazyPagingItems()
 
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
             items(
                 count = items.itemCount,
                 key = items.itemKey { it.id },

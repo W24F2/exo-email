@@ -43,6 +43,8 @@ fun MailListScreen(
     onOpenDraft: ((String) -> Unit)? = null,
     emptyText: String = "Nothing here yet",
     onRefresh: (() -> Unit)? = null,
+    showStar: Boolean = true,
+    title: String? = null,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
     val items = messages.collectAsLazyPagingItems()
@@ -77,8 +79,18 @@ fun MailListScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = rememberLazyListState(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 12.dp),
         ) {
+            if (title != null) {
+                item {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp),
+                    )
+                }
+            }
             items(
                 count = items.itemCount,
                 key = items.itemKey { it.id },
@@ -92,6 +104,7 @@ fun MailListScreen(
                     read = m.isRead,
                     starred = m.isStarred,
                     hasAttachments = m.hasAttachments,
+                    showStar = showStar && !m.isDraft,
                     onClick = {
                         if (m.isDraft && onOpenDraft != null) onOpenDraft(m.id)
                         else { vm.markRead(m.id); onOpenMessage(m.id) }
@@ -115,7 +128,7 @@ fun StarredScreen(app: LiquidMailApp, onOpenMessage: (String) -> Unit) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
     val account by vm.resolvedAccount.collectAsState()
     if (account == null) return
-    MailListScreen(app, vm.starred(account!!.id), onOpenMessage, emptyText = "No starred messages")
+    MailListScreen(app, vm.starred(account!!.id), onOpenMessage, emptyText = "No starred messages", title = "Starred")
 }
 
 @Composable
@@ -123,7 +136,7 @@ fun SentScreen(app: LiquidMailApp, onOpenMessage: (String) -> Unit) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
     val account by vm.resolvedAccount.collectAsState()
     if (account == null) return
-    MailListScreen(app, vm.sent(account!!.id), onOpenMessage, emptyText = "No sent messages")
+    MailListScreen(app, vm.sent(account!!.id), onOpenMessage, emptyText = "No sent messages", showStar = false, title = "Sent")
 }
 
 @Composable
@@ -131,5 +144,5 @@ fun DraftsScreen(app: LiquidMailApp, onOpenDraft: (String) -> Unit) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
     val account by vm.resolvedAccount.collectAsState()
     if (account == null) return
-    MailListScreen(app, vm.drafts(account!!.id), onOpenMessage = {}, onOpenDraft = onOpenDraft, emptyText = "No drafts")
+    MailListScreen(app, vm.drafts(account!!.id), onOpenMessage = {}, onOpenDraft = onOpenDraft, emptyText = "No drafts", showStar = false, title = "Drafts")
 }

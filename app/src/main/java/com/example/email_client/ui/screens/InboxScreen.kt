@@ -51,7 +51,6 @@ import com.example.email_client.LiquidMailApp
 import com.example.email_client.ui.inbox.InboxFilter
 import com.example.email_client.ui.inbox.InboxViewModel
 import com.example.email_client.ui.inbox.InboxViewModelFactory
-import com.example.email_client.ui.theme.BrandPink
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -80,11 +79,11 @@ fun InboxScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            contentPadding = PaddingValues(bottom = 12.dp),
         ) {
             // Greeting header
             item {
-                Column(modifier = Modifier.padding(top = 8.dp, bottom = 12.dp)) {
+                Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 12.dp)) {
                     Text(
                         greeting(),
                         style = MaterialTheme.typography.headlineSmall,
@@ -101,7 +100,7 @@ fun InboxScreen(
             // Real filter chips: All / Unread / Starred
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 0.dp).padding(bottom = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     InboxFilter.entries.forEach { f ->
@@ -223,6 +222,7 @@ internal fun InboxRow(
     read: Boolean,
     starred: Boolean,
     hasAttachments: Boolean = false,
+    showStar: Boolean = true,
     onClick: () -> Unit,
     onStar: () -> Unit,
 ) {
@@ -234,41 +234,45 @@ internal fun InboxRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Unread indicator dot
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(if (!read) BrandPink else Color.Transparent),
-        )
-        // Avatar
+        // Gmail-style: unread dot sits inside the avatar circle
         Box(
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
+                .background(MaterialTheme.colorScheme.secondaryContainer),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                sender.take(1).uppercase(),
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.labelLarge,
-            )
+            if (!read) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
+            } else {
+                Text(
+                    sender.take(1).uppercase(),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     sender,
                     fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (!read) MaterialTheme.colorScheme.onBackground
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     formatDate(date),
+                    fontWeight = if (!read) FontWeight.Medium else FontWeight.Normal,
                     color = if (!read) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelSmall,
@@ -277,9 +281,10 @@ internal fun InboxRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     subject.ifBlank { snippet },
-                    fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Medium,
+                    fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Normal,
+                    color = if (!read) MaterialTheme.colorScheme.onBackground
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onBackground,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                 )
@@ -302,12 +307,15 @@ internal fun InboxRow(
                 )
             }
         }
-        IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {
-            Icon(
-                if (starred) Icons.Filled.Star else Icons.Outlined.Star,
-                contentDescription = "Star",
-                tint = if (starred) BrandPink else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        if (showStar) {
+            IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    if (starred) Icons.Filled.Star else Icons.Outlined.Star,
+                    contentDescription = "Star",
+                    tint = if (starred) MaterialTheme.colorScheme.tertiary
+                            else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                )
+            }
         }
     }
 }

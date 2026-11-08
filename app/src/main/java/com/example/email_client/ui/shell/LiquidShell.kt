@@ -90,13 +90,13 @@ fun LiquidShell(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
                         .clickable { onAvatar() },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
                         accountInitial.ifEmpty { "•" },
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
                         style = MaterialTheme.typography.labelLarge,
                     )
                 }

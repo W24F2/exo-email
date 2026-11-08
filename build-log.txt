@@ -1,0 +1,123 @@
+﻿.\gradlew.bat : Caught exception: Couldn't open current thread, error = 5
+At line:1 char:321
++ ... adle-home"; .\gradlew.bat :app:assembleDebug --console=plain -q 2>&1  ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Caught exceptio...read, error = 5:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Exception in thread "File watcher server" net.rubygrapefruit.platform.NativeException: Couldn't open current thread, 
+error = 5
+	at org.gradle.fileevents.internal.AbstractNativeFileEventFunctions$NativeFileWatcher.initializeRunLoop0(Native Method)
+	at org.gradle.fileevents.internal.AbstractNativeFileEventFunctions$NativeFileWatcher.initializeRunLoop(AbstractNativeF
+ileEventFunctions.java:25)
+	at org.gradle.fileevents.internal.AbstractFileEventFunctions$AbstractFileWatcher$1.run(AbstractFileEventFunctions.java
+:151)
+e: java.nio.file.AccessDeniedException: 
+C:\Users\24F2\AppData\Local\kotlin\daemon\kotlin-daemon-client-tsmarker10032682730471320329.tmp
+e: Daemon compilation failed: Could not connect to Kotlin compile daemon
+java.lang.RuntimeException: Could not connect to Kotlin compile daemon
+	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemon(GradleKotlinCompilerWork.kt:214)
+	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.compileWithDaemonOrFallbackImpl(GradleKotlinCompilerWo
+rk.kt:159)
+	at org.jetbrains.kotlin.compilerRunner.GradleKotlinCompilerWork.run(GradleKotlinCompilerWork.kt:111)
+	at org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction.execute(GradleCo
+mpilerRunnerWithWorkers.kt:74)
+	at org.gradle.workers.internal.DefaultWorkerServer.execute(DefaultWorkerServer.java:68)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:64)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1$1.create(NoIsolationWorkerFactory.java:61)
+	at org.gradle.internal.classloader.ClassLoaderUtils.executeInClassloader(ClassLoaderUtils.java:102)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.lambda$execute$0(NoIsolationWorkerFactory.java:61)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:44)
+	at org.gradle.workers.internal.AbstractWorker$1.call(AbstractWorker.java:41)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperati
+onRunner.java:210)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$CallableBuildOperationWorker.execute(DefaultBuildOperati
+onRunner.java:205)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:67)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner$2.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:167)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.execute(DefaultBuildOperationRunner.java:60)
+	at org.gradle.internal.operations.DefaultBuildOperationRunner.call(DefaultBuildOperationRunner.java:54)
+	at org.gradle.workers.internal.AbstractWorker.executeWrappedInBuildOperation(AbstractWorker.java:41)
+	at org.gradle.workers.internal.NoIsolationWorkerFactory$1.execute(NoIsolationWorkerFactory.java:58)
+	at org.gradle.workers.internal.DefaultWorkerExecutor.lambda$submitWork$0(DefaultWorkerExecutor.java:174)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runExecution(DefaultConditionalExecutionQ
+ueue.java:191)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.access$500(DefaultConditionalExecutionQue
+ue.java:112)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner$1.run(DefaultConditionalExecutionQueue.ja
+va:168)
+	at org.gradle.internal.Factories$1.create(Factories.java:30)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.lambda$runAndReleaseLocks$0(DefaultWorkerLeaseService.java:300)
+	at org.gradle.internal.work.ResourceLockStatistics$1.measure(ResourceLockStatistics.java:43)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAndReleaseLocks(DefaultWorkerLeaseService.java:298)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocksAcquired(DefaultWorkerLeaseService.java:294)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.withLocks(DefaultWorkerLeaseService.java:286)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:130)
+	at org.gradle.internal.work.DefaultWorkerLeaseService.runAsWorkerThread(DefaultWorkerLeaseService.java:135)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.runBatch(DefaultConditionalExecutionQueue
+.java:163)
+	at org.gradle.internal.work.DefaultConditionalExecutionQueue$ExecutionRunner.run(DefaultConditionalExecutionQueue.java
+:125)
+	at java.base/java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:545)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:328)
+	at org.gradle.internal.concurrent.ExecutorPolicy$CatchAndRecordFailures.onExecute(ExecutorPolicy.java:64)
+	at org.gradle.internal.concurrent.AbstractManagedExecutor$1.run(AbstractManagedExecutor.java:47)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1090)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:614)
+	at java.base/java.lang.Thread.run(Thread.java:1474)
+
+exception: WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+exception: WARNING: sun.misc.Unsafe::objectFieldOffset has been called by 
+org.jetbrains.kotlin.com.intellij.util.containers.Unsafe (file:/C:/Users/24F2/AndroidStudioProjects/Emailclient/.agents
+/gradle-home/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-compiler-embeddable/2.2.10/6882d39ef03b18879c1a5d2a
+83c2212361bed5fe/kotlin-compiler-embeddable-2.2.10.jar)
+exception: WARNING: Please consider reporting this to the maintainers of class 
+org.jetbrains.kotlin.com.intellij.util.containers.Unsafe
+exception: WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:4:8: warning: 'class 
+EncryptedSharedPreferences : Any, SharedPreferences' is deprecated. Deprecated in Java.
+exception: import androidx.security.crypto.EncryptedSharedPreferences
+exception:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:5:8: warning: 'class MasterKey 
+: Any' is deprecated. Deprecated in Java.
+exception: import androidx.security.crypto.MasterKey
+exception:        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:13:19: warning: 'class 
+MasterKey : Any' is deprecated. Deprecated in Java.
+exception:         val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+exception:                   ^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:13:29: warning: 
+'constructor(p0: @NonNull() Context): MasterKey.Builder' is deprecated. Deprecated in Java.
+exception:         val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+exception:                             ^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:13:59: warning: 'class 
+MasterKey : Any' is deprecated. Deprecated in Java.
+exception:         val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+exception:                                                           ^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:13:69: warning: 'enum class 
+KeyScheme : Enum<MasterKey.KeyScheme!>' is deprecated. Deprecated in Java.
+exception:         val key = MasterKey.Builder(context).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build()
+exception:                                                                     ^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:14:9: warning: 'class 
+EncryptedSharedPreferences : Any, SharedPreferences' is deprecated. Deprecated in Java.
+exception:         EncryptedSharedPreferences.create(
+exception:         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:16:13: warning: 'class 
+EncryptedSharedPreferences : Any, SharedPreferences' is deprecated. Deprecated in Java.
+exception:             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+exception:             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:16:40: warning: 'enum class 
+PrefKeyEncryptionScheme : Enum<EncryptedSharedPreferences.PrefKeyEncryptionScheme!>' is deprecated. Deprecated in Java.
+exception:             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+exception:                                        ^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:17:13: warning: 'class 
+EncryptedSharedPreferences : Any, SharedPreferences' is deprecated. Deprecated in Java.
+exception:             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+exception:             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+exception: app\src\main\java\com\example\email_client\core\security\CredentialStore.kt:17:40: warning: 'enum class 
+PrefValueEncryptionScheme : Enum<EncryptedSharedPreferences.PrefValueEncryptionScheme!>' is deprecated. Deprecated in 
+Java.
+exception:             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM,
+exception:                                        ^^^^^^^^^^^^^^^^^^^^^^^^^
