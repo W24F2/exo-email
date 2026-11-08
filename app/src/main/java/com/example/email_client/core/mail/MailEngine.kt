@@ -16,7 +16,13 @@ data class MailMessage(
     val hasAttachments: Boolean,
 )
 
-data class MailBody(val text: String, val html: String?, val attachments: List<AttachmentMeta>)
+data class MailBody(val text: String, val html: String?, val attachments: List<AttachmentMeta>, val inlineImages: List<InlineImage> = emptyList())
+
+/** CID-referenced inline image extracted from a MIME part (cid: URL in HTML). */
+data class InlineImage(val contentId: String, val mimeType: String, val bytes: ByteArray) {
+    override fun equals(other: Any?): Boolean = other is InlineImage && contentId == other.contentId
+    override fun hashCode(): Int = contentId.hashCode()
+}
 
 data class AttachmentMeta(val index: Int, val fileName: String, val mimeType: String, val size: Long)
 

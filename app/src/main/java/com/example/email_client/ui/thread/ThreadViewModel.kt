@@ -28,6 +28,8 @@ class ThreadViewModel(
     val body: StateFlow<MailBody?> = _body
     private val _attachments = MutableStateFlow<List<AttachmentMeta>>(emptyList())
     val attachments: StateFlow<List<AttachmentMeta>> = _attachments
+    private val _inlineImages = MutableStateFlow<List<com.example.email_client.core.mail.InlineImage>>(emptyList())
+    val inlineImages: StateFlow<List<com.example.email_client.core.mail.InlineImage>> = _inlineImages
 
     init {
         viewModelScope.launch {
@@ -42,6 +44,7 @@ class ThreadViewModel(
                         .onSuccess {
                             _body.value = it
                             _attachments.value = it.attachments
+                            _inlineImages.value = it.inlineImages
                         }
                 }
             }

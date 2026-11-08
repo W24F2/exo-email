@@ -3,6 +3,7 @@ package com.example.email_client.core.mail.engine
 import com.example.email_client.core.mail.AccountConfig
 import com.example.email_client.core.mail.AttachmentMeta
 import com.example.email_client.core.mail.FolderInfo
+import com.example.email_client.core.mail.InlineImage
 import com.example.email_client.core.mail.MailBody
 import com.example.email_client.core.mail.MailEngine
 import com.example.email_client.core.mail.MailMessage
@@ -205,17 +206,35 @@ class ImapSmtpMailEngine : MailEngine {
         val text = StringBuilder()
         val html = StringBuilder()
         val attachments = mutableListOf<AttachmentMeta>()
+        val inlineImages = mutableListOf<InlineImage>()
         var index = 0
 
         fun walk(part: Part) {
             val disp = part.disposition
-            if (disp != null && (disp.equals(Part.ATTACHMENT, true) || disp.equals(Part.INLINE, true) && part.fileName?.isNotEmpty() == true)) {
+            val fileName = runCatching { part.fileName }.getOrNull()
+            val isAttachment = disp != null &&
+                (disp.equals(Part.ATTACHMENT, true) ||
+                    (disp.equals(Part.INLINE, true) && !fileName.isNullOrEmpty()))
+
+            if (isAttachment) {
                 attachments += AttachmentMeta(
                     index = index++,
-                    fileName = runCatching { MimeUtility.decodeText(part.fileName ?: "attachment") }.getOrDefault(part.fileName ?: "attachment"),
+                    fileName = runCatching { MimeUtility.decodeText(fileName ?: "attachment") }.getOrDefault(fileName ?: "attachment"),
                     mimeType = part.contentType?.substringBefore(';')?.trim() ?: "application/octet-stream",
                     size = part.size.toLong().coerceAtLeast(0),
                 )
+                // Inline images referenced via cid: in HTML are captured too.
+                if (part.isMimeType("image/*")) {
+                    val cid = runCatching {
+                        part.getHeader("Content-ID")?.firstOrNull()?.trim('<', '>')
+                    }.getOrNull()
+                    val bytes = runCatching {
+                        (part.content as? java.io.InputStream)?.readBytes()
+                    }.getOrNull()
+                    if (cid != null && bytes != null && bytes.isNotEmpty()) {
+                        inlineImages += InlineImage(cid, part.contentType?.substringBefore(';')?.trim() ?: "image/png", bytes)
+                    }
+                }
                 return
             }
             when {
@@ -226,13 +245,29 @@ class ImapSmtpMailEngine : MailEngine {
                     for (i in 0 until mp.count) walk(mp.getBodyPart(i))
                 }
                 part.isMimeType("message/rfc822") -> (part.content as? Part)?.let(::walk)
+                // Non-attachment image parts without disposition (inline in related multipart)
+                part.isMimeType("image/*") && !fileName.isNullOrEmpty() -> {
+                    val cid = runCatching {
+                        part.getHeader("Content-ID")?.firstOrNull()?.trim('<', '>')
+                    }.getOrNull() ?: fileName.trim('<', '>')
+                    val bytes = runCatching { (part.content as? java.io.InputStream)?.readBytes() }.getOrNull()
+                    if (bytes != null && bytes.isNotEmpty()) {
+                        inlineImages += InlineImage(cid, part.contentType?.substringBefore(';')?.trim() ?: "image/png", bytes)
+                    }
+                }
             }
         }
         walk(this)
+        var htmlOut = html.toString()
+        // Rewrite cid: references to a custom scheme the WebView intercepts.
+        inlineImages.forEach { img ->
+            htmlOut = htmlOut.replace("cid:${img.contentId}", "liquidimg://${img.contentId}")
+        }
         return MailBody(
-            text = text.toString().ifBlank { html.toString().replace(Regex("<[^>]+>"), " ") },
-            html = html.toString().ifBlank { null },
+            text = text.toString().ifBlank { htmlOut.replace(Regex("<[^>]+>"), " ") },
+            html = htmlOut.ifBlank { null },
             attachments = attachments,
+            inlineImages = inlineImages,
         )
     }
 }

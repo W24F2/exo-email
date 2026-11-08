@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -34,8 +35,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import android.webkit.WebResourceRequest
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.ui.viewinterop.AndroidView
 import com.example.email_client.LiquidMailApp
+import com.example.email_client.core.mail.InlineImage
+import com.example.email_client.core.mail.MailBody
+import com.example.email_client.data.db.MessageEntity
 import com.example.email_client.ui.components.GlassBackButton
 import com.example.email_client.ui.components.GlassButton
 import com.example.email_client.ui.components.GlassTopBar
@@ -56,6 +65,7 @@ fun ThreadScreen(
     val message by vm.message.collectAsState()
     val body by vm.body.collectAsState()
     val attachments by vm.attachments.collectAsState()
+    val inlineImages by vm.inlineImages.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -124,19 +134,8 @@ fun ThreadScreen(
                     }
                 }
 
-                // Body
-                Surface(
-                    shape = MaterialTheme.shapes.large,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        body?.text ?: m.snippet,
-                        modifier = Modifier.padding(18.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                }
+                // Body — HTML in WebView (images + formatting), plain text fallback
+                MailBodyView(body = body, message = m)
 
                 // Attachments
                 if (attachments.isNotEmpty()) {
@@ -171,3 +170,94 @@ fun ThreadScreen(
         }
     }
 }
+
+/**
+ * Renders the message body. HTML mail goes through a WebView so formatting,
+ * remote images, and cid: inline images all display like a real mail client.
+ * Plain-text-only mail falls back to a styled Text block.
+ */
+@Composable
+private fun MailBodyView(body: MailBody?, message: MessageEntity) {
+    val html = body?.html
+    if (html != null) {
+        val dark = MaterialTheme.colorScheme.background == androidx.compose.ui.graphics.Color(0xFF0E1116) ||
+            androidx.compose.foundation.isSystemInDarkTheme()
+        val bg = MaterialTheme.colorScheme.surfaceContainerHigh.toArgb()
+        val fg = MaterialTheme.colorScheme.onSurface.toArgb()
+        val imgMap = remember(body) {
+            body?.inlineImages?.associateBy { it.contentId } ?: emptyMap()
+        }
+
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        settings.javaScriptEnabled = false
+                        settings.loadsImagesAutomatically = true
+                        settings.blockNetworkImage = false
+                        setBackgroundColor(bg)
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView,
+                                request: WebResourceRequest,
+                            ): android.webkit.WebResourceResponse? {
+                                val url = request.url.toString()
+                                if (url.startsWith("liquidimg://")) {
+                                    val cid = url.removePrefix("liquidimg://")
+                                    val img = imgMap[cid]
+                                    if (img != null) {
+                                        return android.webkit.WebResourceResponse(
+                                            img.mimeType, "utf-8",
+                                            java.io.ByteArrayInputStream(img.bytes),
+                                        )
+                                    }
+                                }
+                                return super.shouldInterceptRequest(view, request)
+                            }
+                        }
+                    }
+                },
+                update = { web ->
+                    web.setBackgroundColor(bg)
+                    val styled = """
+                        <!DOCTYPE html><html><head>
+                        <meta name="viewport" content="width=device-width, initial-scale=1">
+                        <style>
+                          body { color: #${Integer.toHexString(fg).substring(2)}; font-family: sans-serif; font-size: 15px; line-height: 1.5; padding: 0; margin: 0; word-wrap: break-word; }
+                          img { max-width: 100%; height: auto; }
+                          a { color: #5B8CFF; }
+                          blockquote { border-left: 3px solid #888; margin-left: 0; padding-left: 12px; color: #888; }
+                        </style></head><body>${html}</body></html>
+                    """.trimIndent()
+                    web.loadDataWithBaseURL("https://mail.local/", styled, "text/html", "utf-8", null)
+                },
+                modifier = Modifier.fillMaxWidth().height(400.dp),
+            )
+        }
+    } else {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                body?.text ?: message.snippet,
+                modifier = Modifier.padding(18.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+private fun androidx.compose.ui.graphics.Color.toArgb(): Int =
+    android.graphics.Color.argb(
+        (alpha * 255).toInt(),
+        (red * 255).toInt(),
+        (green * 255).toInt(),
+        (blue * 255).toInt(),
+    )
