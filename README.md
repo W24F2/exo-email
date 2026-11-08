@@ -1,6 +1,16 @@
 # Liquid Mail
 
-Sleek Android email client targeting **API 37** with an OPPO/ColorOS-style **liquid glass** theme (frosted translucent cards, gradient accents, animated drifting backdrop), built performance- and battery-first.
+A fast, Material You 3 email client for Android (API 37), built performance- and battery-first. Real HTML email rendering, plain IMAP + SMTP — no OAuth in v1.
+
+## Features
+
+- **Material You 3** dynamic color theming (Android 12+ wallpaper-based schemes, static fallbacks below)
+- **Liquid-glass dock** navigation with real-time Haze blur rendering
+- **Full HTML email rendering** via WebView — remote images, `cid:` inline images, dark-mode-aware styling
+- **Attachment extraction** — MIME parts surfaced as download chips
+- **Real IMAP + SMTP** via Eclipse Angus (Jakarta Mail 2.x); envelope-only sync keeps inbox loads fast
+- **Gmail / Outlook / iCloud / Yahoo / QQ / 163 / generic IMAP** provider presets
+- Paged inbox (Room `PagingSource` → `LazyColumn`), pull-to-refresh, search, star/read state synced to server flags
 
 ## Providers
 
@@ -19,27 +29,28 @@ Plain **IMAP + SMTP** — no OAuth in v1. Onboarding auto-detects the provider f
 ## Architecture
 
 ```
-ui/           Compose + Navigation3 screens, liquid-glass design system
-  theme/        palette, typography, dark-first colour scheme
-  components/   Modifier.glass(), GlassCard/TopBar/Fab/SearchBar, LiquidBackdrop
-  screens/      Onboarding, Inbox, Thread, Compose, Accounts
-  */ViewModel   per-screen VMs
+ui/           Compose + Navigation3 screens, Material You theme
+  theme/        dynamic color schemes, shapes, typography
+  shell/        LiquidShell — floating glass dock + Haze blur
+  screens/      Onboarding, Inbox, Thread, Compose, Folders, Settings
+  */ViewModel   per-screen VMs (thread VM cancels stale fetches on message switch)
 core/
-  mail/         ProviderCatalog, AccountConfig, MailEngine interface
-  mail/engine/  ImapSmtpMailEngine (Eclipse Angus / Jakarta Mail 2.x)
+  mail/         ProviderCatalog, AccountConfig, MailEngine interface, MailBody/InlineImage models
+  mail/engine/  ImapSmtpMailEngine (Eclipse Angus) — envelope FetchProfile sync, cid: rewriting
   security/     CredentialStore (EncryptedSharedPreferences + Keystore)
 data/
-  db/           Room: accounts / folders / messages / attachments (+ PagingSource)
+  db/           Room v3: accounts / folders / messages / attachments (+ PagingSource)
   settings/     DataStore: onboarded flag, active account
 sync/           MailSyncWorker (WorkManager, 15-min periodic, network-constrained)
 ```
 
 ## Performance & battery
 
-- Paged inbox: Room `PagingSource` -> `LazyColumn` (pageSize 40, prefetch 15)
+- Paged inbox: Room `PagingSource` → `LazyColumn` (pageSize 40, prefetch 15)
 - `MailSyncWorker`: 15-min periodic WorkManager job, `NetworkType.CONNECTED`, exponential backoff — **no IMAP IDLE push** (wakelock-heavy)
-- IMAP envelope-only `FETCH` for sync; body fetched lazily and cached to `cacheDir/mail/`
-- All mail I/O on `Dispatchers.IO`; flows collected via `collectAsStateWithLifecycle`-style state
+- IMAP **envelope-only** `FETCH` for list sync (`FetchProfile` prefetch); body fetched lazily on open and cached in Room
+- Attachment detection via `Content-Type` headers — never touches part bodies during sync
+- All mail I/O on `Dispatchers.IO`; flows collected with lifecycle-aware state
 - StrictMode (thread + VM) in debug builds
 - `baseline-prof.txt` + `profileinstaller` for AOT/JIT warmup of startup + inbox path
 - Release: R8 full mode + resource shrinking (`android.enableR8.fullMode=true`)
@@ -53,9 +64,10 @@ sync/           MailSyncWorker (WorkManager, 15-min periodic, network-constraine
 ./gradlew.bat :app:lintDebug            # lint
 ```
 
-Requirements: JDK 17+ (toolchain 25 auto-provisioned via foojay), Android SDK 37 (`local.properties` -> `sdk.dir`).
+Requirements: JDK 17+ (toolchain auto-provisioned via foojay), Android SDK 37 (`local.properties` → `sdk.dir`).
 
 ## Notes
 
 - `EncryptedSharedPreferences`/`MasterKey` are deprecated upstream but still the only shipped Keystore-backed prefs API; used deliberately (see `CredentialStore.kt` warnings).
 - Gmail without OAuth means users must generate an app password; onboarding links straight to the provider help page.
+- Accounts are deduplicated by email on add and merged on startup — prevents the split-credential bug where half the inbox pointed at a credential-less account id.
