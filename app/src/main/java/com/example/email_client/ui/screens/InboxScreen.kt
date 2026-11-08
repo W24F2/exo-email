@@ -65,11 +65,13 @@ fun InboxScreen(
     onOpenMessage: (String) -> Unit,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
-    val items = vm.messages(query).collectAsLazyPagingItems()
+    val filter by vm.filter.collectAsState()
+    val items = vm.messages().collectAsLazyPagingItems()
     val refreshing by vm.refreshing.collectAsState()
     val syncError by vm.syncError.collectAsState()
     val account by vm.resolvedAccount.collectAsState()
-    var filter by remember { mutableStateOf(InboxFilter.ALL) }
+
+    androidx.compose.runtime.LaunchedEffect(query) { vm.setQuery(query) }
 
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -105,7 +107,7 @@ fun InboxScreen(
                     InboxFilter.entries.forEach { f ->
                         FilterChip(
                             selected = filter == f,
-                            onClick = { filter = f },
+                            onClick = { vm.setFilter(f) },
                             label = {
                                 Text(
                                     when (f) {

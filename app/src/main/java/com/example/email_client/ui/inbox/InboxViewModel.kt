@@ -59,20 +59,29 @@ class InboxViewModel(
         }
     }
 
+    private val _filter = MutableStateFlow(InboxFilter.ALL)
+    val filter: StateFlow<InboxFilter> = _filter
+
+    private val _query = MutableStateFlow("")
+
+    fun setFilter(f: InboxFilter) { _filter.value = f }
+    fun setQuery(q: String) { _query.value = q }
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun messages(query: String, filter: InboxFilter = InboxFilter.ALL): Flow<PagingData<MessageEntity>> = resolvedAccount
-        .flatMapLatest { account ->
-            if (account == null) flowOf(PagingData.empty())
-            else {
-                val base = when {
-                    query.isNotBlank() -> repo.searchAll(account.id, query)
-                    filter == InboxFilter.UNREAD -> repo.unreadPager(account.id)
-                    filter == InboxFilter.STARRED -> repo.starredPager(account.id)
-                    else -> repo.inboxPager(account.id)
+    fun messages(): Flow<PagingData<MessageEntity>> =
+        kotlinx.coroutines.flow.combine(resolvedAccount, _filter, _query) { acc, f, q -> Triple(acc, f, q) }
+            .flatMapLatest { (account, filter, query) ->
+                if (account == null) flowOf(PagingData.empty())
+                else {
+                    val base = when {
+                        query.isNotBlank() -> repo.searchAll(account.id, query)
+                        filter == InboxFilter.UNREAD -> repo.unreadPager(account.id)
+                        filter == InboxFilter.STARRED -> repo.starredPager(account.id)
+                        else -> repo.inboxPager(account.id)
+                    }
+                    base.cachedIn(viewModelScope)
                 }
-                base.cachedIn(viewModelScope)
             }
-        }
 
     fun starred(accountId: String) = repo.starredPager(accountId).cachedIn(viewModelScope)
     fun sent(accountId: String) = repo.sentPager(accountId).cachedIn(viewModelScope)
@@ -92,9 +101,11 @@ class InboxViewModel(
         _refreshing.value = true
         _syncError.value = null
         try {
-            val secret = runCatching { credentials.get(account.id)?.secret }.getOrNull()
+            val creds = runCatching { credentials.get(account.id) }.getOrNull()
+            val secret = creds?.secret
             if (secret == null) {
-                _syncError.value = "Sign in again to sync this account."
+                // No stored credential (e.g. demo/offline account) — don't treat as error
+                _syncError.value = null
                 return
             }
             repo.refreshInbox(account, secret)

@@ -36,6 +36,11 @@ class LiquidMailApp : Application() {
         }
         database = AppDatabase.create(this)
         settings = SettingsRepository(this)
+        if (BuildConfig.DEBUG) {
+            kotlinx.coroutines.runBlocking {
+                com.example.email_client.data.DemoSeeder.seedIfEmpty(this@LiquidMailApp, database)
+            }
+        }
         scheduleSync()
     }
 
