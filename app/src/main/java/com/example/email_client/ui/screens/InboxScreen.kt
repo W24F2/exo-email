@@ -26,7 +26,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,9 +35,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.PagingData
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.email_client.LiquidMailApp
+import com.example.email_client.data.db.MessageEntity
 import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.inbox.InboxViewModel
 import com.example.email_client.ui.inbox.InboxViewModelFactory
@@ -58,12 +59,14 @@ fun InboxScreen(
     app: LiquidMailApp,
     haze: HazeState,
     query: String,
+    accountsExist: Boolean,
     onOpenMessage: (String) -> Unit,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
+    // vm.messages() returns empty paging when no resolved account exists; accountsExist
+    // flag only drives the empty-state label so we surface a friendly CTA.
     val items = vm.messages(query).collectAsLazyPagingItems()
     val refreshing by vm.refreshing.collectAsState()
-    val account by vm.activeAccount.collectAsState()
 
     PullToRefreshBox(
         isRefreshing = refreshing,
@@ -74,7 +77,8 @@ fun InboxScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 GlassCard(haze = haze) {
                     Text(
-                        if (query.isBlank()) "All caught up" else "No results",
+                        if (!accountsExist) "Add an account to get started"
+                        else if (query.isBlank()) "All caught up" else "No results",
                         modifier = Modifier.padding(28.dp),
                         color = TextSecondary,
                     )
@@ -85,9 +89,7 @@ fun InboxScreen(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp),
         ) {
-            item {
-                GlassCard(haze = haze, tintAlpha = 0.07f) {}
-            }
+            item { GlassCard(haze = haze, tintAlpha = 0.07f) {} }
             items(
                 count = items.itemCount,
                 key = items.itemKey { it.id },
@@ -100,7 +102,6 @@ fun InboxScreen(
                     date = m.date,
                     read = m.isRead,
                     starred = m.isStarred,
-                    unread = !m.isRead,
                     onClick = { vm.markRead(m.id); onOpenMessage(m.id) },
                     onStar = { vm.toggleStar(m.id, !m.isStarred) },
                 )
@@ -115,6 +116,8 @@ fun InboxScreen(
     }
 }
 
+private fun emptyPaging(): PagingData<MessageEntity> = PagingData.empty()
+
 @Composable
 internal fun InboxRow(
     sender: String,
@@ -123,7 +126,6 @@ internal fun InboxRow(
     date: Long,
     read: Boolean,
     starred: Boolean,
-    unread: Boolean,
     onClick: () -> Unit,
     onStar: () -> Unit,
 ) {
@@ -135,14 +137,12 @@ internal fun InboxRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Unread indicator dot
         Box(
             modifier = Modifier
                 .size(8.dp)
                 .clip(CircleShape)
-                .background(if (unread) LiquidPink else Color.Transparent),
+                .background(if (!read) LiquidPink else Color.Transparent),
         )
-        // Avatar
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -156,26 +156,19 @@ internal fun InboxRow(
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
-                            listOf(
-                                Color.White.copy(alpha = 0.32f),
-                                Color.White.copy(alpha = 0.07f),
-                            )
+                            listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.07f))
                         )
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    sender.take(1).uppercase(),
-                    color = OnAccent,
-                    fontWeight = FontWeight.Bold,
-                )
+                Text(sender.take(1).uppercase(), color = OnAccent, fontWeight = FontWeight.Bold)
             }
         }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     sender,
-                    fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
+                    fontWeight = if (!read) FontWeight.SemiBold else FontWeight.Normal,
                     modifier = Modifier.weight(1f),
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
                 )
@@ -183,14 +176,12 @@ internal fun InboxRow(
             }
             Text(
                 subject,
-                fontWeight = if (unread) FontWeight.Medium else FontWeight.Normal,
+                fontWeight = if (!read) FontWeight.Medium else FontWeight.Normal,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
             Text(
-                snippet,
-                color = TextSecondary, maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
+                snippet, color = TextSecondary, maxLines = 1,
+                overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall,
             )
         }
         IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {

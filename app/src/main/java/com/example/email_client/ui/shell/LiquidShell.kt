@@ -1,9 +1,11 @@
 package com.example.email_client.ui.shell
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,13 +27,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.example.email_client.ui.components.GlassButton
 import com.example.email_client.ui.components.GlassCard
 import com.example.email_client.ui.components.GlassSearchBar
 import com.example.email_client.ui.components.GlassShape
 import com.example.email_client.ui.components.LiquidBackdrop
-import com.example.email_client.ui.theme.LocalCoolGradient
+import com.example.email_client.ui.theme.LocalAccentGradient
+import com.example.email_client.ui.theme.LiquidCyan
 import com.example.email_client.ui.theme.OnAccent
 import com.example.email_client.ui.theme.TextSecondary
 import com.example.email_client.ui.theme.TextTertiary
@@ -49,6 +55,8 @@ val ShellTabs = listOf(
 /**
  * Shared app chrome: liquid backdrop + frosted top bar (avatar + search) +
  * floating bottom nav pill. Content slots between them.
+ *
+ * When [accountsExist] is false, shows a prominent "Add Account" CTA inside the content area.
  */
 @Composable
 fun LiquidShell(
@@ -59,6 +67,8 @@ fun LiquidShell(
     activeTab: Any,
     onTab: (Any) -> Unit,
     onAvatar: () -> Unit,
+    accountsExist: Boolean,
+    onAddAccount: () -> Unit,
     accountInitial: String,
     content: @Composable BoxScope.() -> Unit,
 ) {
@@ -75,12 +85,11 @@ fun LiquidShell(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(LocalCoolGradient.current),
+                    .background(LocalAccentGradient.current)
+                    .clickable { onAvatar() },
                 contentAlignment = Alignment.Center,
             ) {
-                IconButton(onClick = onAvatar) {
-                    Text(accountInitial, color = OnAccent)
-                }
+                Text(accountInitial.ifEmpty { "•" }, color = OnAccent)
             }
             GlassSearchBar(
                 value = query,
@@ -92,13 +101,24 @@ fun LiquidShell(
             )
         }
 
-        // Content
+        // Content — wrap with optional Add Account CTA overlay when no accounts
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(top = 76.dp, bottom = 96.dp),
-            content = content,
-        )
+        ) {
+            Box(modifier = Modifier.fillMaxSize(), content = content)
+            if (!accountsExist) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.BottomCenter,
+                ) {
+                    GlassButton(onClick = onAddAccount, label = "Add Account", modifier = Modifier.fillMaxWidth())
+                }
+            }
+        }
 
         // Floating liquid bottom-nav pill
         Box(
@@ -119,43 +139,30 @@ fun LiquidShell(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ShellTabs.forEach { tab ->
-                        val selected = activeTab == tab.route ||
+                        val isSelected = activeTab == tab.route ||
                             (tab.route is com.example.email_client.ui.navigation.FoldersRoute &&
                                 activeTab is com.example.email_client.ui.navigation.FolderRoute)
                         Box(
                             modifier = Modifier
-                                .clip(if (selected) GlassShape.Pill else CircleShape)
+                                .clip(if (isSelected) GlassShape.Pill else CircleShape)
                                 .background(
-                                    if (selected)
-                                        androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                            listOf(
-                                                com.example.email_client.ui.theme.LiquidCyan.copy(alpha = 0.28f),
-                                                com.example.email_client.ui.theme.LiquidViolet.copy(alpha = 0.28f),
-                                            )
-                                        )
-                                    else androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                        listOf(
-                                            androidx.compose.ui.graphics.Color.Transparent,
-                                            androidx.compose.ui.graphics.Color.Transparent,
-                                        )
-                                    )
+                                    if (isSelected) Brush.horizontalGradient(
+                                        listOf(LiquidCyan.copy(alpha = 0.28f), com.example.email_client.ui.theme.LiquidViolet.copy(alpha = 0.28f)))
+                                    else Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
                                 )
-                                .clickableTab { onTab(tab.route) }
+                                .clickable { onTab(tab.route) }
                                 .padding(horizontal = 16.dp, vertical = 10.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            androidx.compose.foundation.layout.Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                            ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
-                                    tab.icon,
-                                    contentDescription = tab.label,
-                                    tint = if (selected) MaterialTheme.colorScheme.primary else TextTertiary,
+                                    tab.icon, contentDescription = tab.label,
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else TextTertiary,
                                     modifier = Modifier.size(20.dp),
                                 )
                                 Text(
                                     tab.label,
-                                    color = if (selected) MaterialTheme.colorScheme.primary else TextSecondary,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else TextSecondary,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                             }
@@ -166,6 +173,3 @@ fun LiquidShell(
         }
     }
 }
-
-private fun Modifier.clickableTab(onClick: () -> Unit): Modifier =
-    this.clickable(onClick = onClick)

@@ -43,7 +43,11 @@ class MailRepository(
     )
 
     /** Sync INBOX envelopes since the last known UID and upsert into Room. */
-    suspend fun refreshInbox(account: AccountEntity, password: String): Result<Int> = runCatching {
+    suspend fun refreshInbox(account: AccountEntity, password: String): Result<Int> =
+        kotlinx.coroutines.withTimeoutOrNull(25_000) { refreshInboxInner(account, password) }
+            ?: Result.failure(java.util.concurrent.TimeoutException("IMAP sync timed out"))
+
+    private suspend fun refreshInboxInner(account: AccountEntity, password: String): Result<Int> = runCatching {
         val config = accountConfig(account, password)
         val sinceUid = db.messageDao().maxUid(account.id) ?: 0L
         val fetched = engine.fetchMessages(config, "INBOX", sinceUid = sinceUid, limit = 50)

@@ -27,24 +27,26 @@ class InboxViewModel(
     private val credentials: CredentialStore = CredentialStore(app),
 ) : ViewModel() {
 
-    val activeAccount: StateFlow<AccountEntity?> = app.settings.activeAccountId
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-        .let { flow ->
-            kotlinx.coroutines.flow.combine(flow, repo.observeAccounts()) { id, accounts ->
-                accounts.firstOrNull { it.id == id } ?: accounts.firstOrNull()
-            }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-        }
+    /** All accounts; used to resolve a valid active one. */
+    val accounts: StateFlow<List<AccountEntity>> = repo.observeAccounts()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    private var currentFolder = "INBOX"
+    /** The account actually used for inbox/folder operations.
+     * Prefers the DataStore-active ID; falls back to first account; null when none exist. */
+    val resolvedAccount: StateFlow<AccountEntity?> = kotlinx.coroutines.flow.combine(
+        app.settings.activeAccountId,
+        accounts,
+    ) { activeId, list ->
+        list.find { it.id == activeId } ?: list.firstOrNull()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun messages(query: String): Flow<PagingData<MessageEntity>> = activeAccount
-        .flatMapLatest { account ->
-            if (account == null) flowOf(PagingData.empty())
-            else if (query.isBlank()) repo.inboxPager(account.id)
-            else repo.searchInbox(account.id, query)
+    fun messages(query: String): Flow<PagingData<MessageEntity>> = resolvedAccount
+        .flatMapLatest { acc ->
+            if (acc == null) flowOf(PagingData.empty())
+            else if (query.isBlank()) repo.inboxPager(acc.id).cachedIn(viewModelScope)
+            else repo.searchInbox(acc.id, query).cachedIn(viewModelScope)
         }
-        .cachedIn(viewModelScope)
 
     fun folders(accountId: String) = repo.observeFolders(accountId)
 
@@ -55,7 +57,7 @@ class InboxViewModel(
     val refreshing: StateFlow<Boolean> = _refreshing
 
     fun refresh() {
-        val account = activeAccount.value ?: return
+        val account = resolvedAccount.value ?: return
         val secret = credentials.get(account.id)?.secret ?: return
         viewModelScope.launch {
             _refreshing.value = true

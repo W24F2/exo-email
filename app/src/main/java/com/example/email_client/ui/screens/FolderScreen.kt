@@ -27,9 +27,9 @@ fun FolderScreen(
     onOpenMessage: (String) -> Unit,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
-    val account by vm.activeAccount.collectAsState()
-    val pager = account?.let { vm.folderMessages(it.id, folder) }
-    val items = pager?.collectAsLazyPagingItems() ?: return
+    val account by vm.resolvedAccount.collectAsState()
+    if (account == null) return
+    val items = vm.folderMessages(account!!.id, folder).collectAsLazyPagingItems()
 
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(
@@ -44,8 +44,7 @@ fun FolderScreen(
                 date = m.date,
                 read = m.isRead,
                 starred = m.isStarred,
-                unread = !m.isRead,
-                onClick = { vm.markRead(m.id); onOpenMessage(m.id) },
+onClick = { vm.markRead(m.id); onOpenMessage(m.id) },
                 onStar = { vm.toggleStar(m.id, !m.isStarred) },
             )
             if (i < items.itemCount - 1) {
