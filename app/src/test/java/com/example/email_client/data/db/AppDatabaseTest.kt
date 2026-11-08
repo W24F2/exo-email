@@ -49,9 +49,9 @@ class AppDatabaseTest {
     @Test fun inboxOrdersByDateDesc() = runTest {
         db.accountDao().upsert(account())
         db.messageDao().upsertAll(listOf(msg("m1", 1, 100), msg("m2", 2, 300), msg("m3", 3, 200)))
-        val src = db.messageDao().pagingInbox("a1")
+        val src = db.messageDao().pagingFolder("a1", "INBOX")
         val page = src.load(androidx.paging.PagingSource.LoadParams.Refresh(null, 50, false))
-        val dates = (page as androidx.paging.PagingSource.LoadResult.Page).data.map { it.date }
+        val dates = (page as androidx.paging.PagingSource.LoadResult.Page<Int, MessageEntity>).data.map { it.date }
         assertEquals(listOf(300L, 200L, 100L), dates)
     }
 

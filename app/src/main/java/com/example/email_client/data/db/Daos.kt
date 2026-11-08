@@ -30,7 +30,7 @@ interface AccountDao {
 
 @Dao
 interface FolderDao {
-    @Query("SELECT * FROM folders WHERE accountId = :accountId")
+    @Query("SELECT * FROM folders WHERE accountId = :accountId ORDER BY unreadCount DESC")
     fun observe(accountId: String): Flow<List<FolderEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -39,8 +39,15 @@ interface FolderDao {
 
 @Dao
 interface MessageDao {
-    @Query("SELECT * FROM messages WHERE accountId = :accountId AND folder = 'INBOX' ORDER BY date DESC")
-    fun pagingInbox(accountId: String): PagingSource<Int, MessageEntity>
+    @Query("SELECT * FROM messages WHERE accountId = :accountId AND folder = :folder ORDER BY date DESC")
+    fun pagingFolder(accountId: String, folder: String): PagingSource<Int, MessageEntity>
+
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'INBOX' " +
+            "AND (:q = '' OR subject LIKE '%' || :q || '%' OR senderName LIKE '%' || :q || '%' OR sender LIKE '%' || :q || '%' OR snippet LIKE '%' || :q || '%') " +
+            "ORDER BY date DESC"
+    )
+    fun searchInbox(accountId: String, q: String): PagingSource<Int, MessageEntity>
 
     @Query("SELECT * FROM messages WHERE id = :id")
     suspend fun get(id: String): MessageEntity?
@@ -59,6 +66,9 @@ interface MessageDao {
 
     @Query("SELECT MAX(uid) FROM messages WHERE accountId = :accountId AND folder = 'INBOX'")
     suspend fun maxUid(accountId: String): Long?
+
+    @Query("UPDATE messages SET folder = :folder WHERE id = :id")
+    suspend fun moveTo(id: String, folder: String)
 }
 
 @Dao

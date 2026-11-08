@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -32,7 +30,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -88,137 +85,136 @@ fun OnboardingScreen(app: LiquidMailApp, onDone: () -> Unit) {
     )
 
     LiquidBackdrop(haze = haze) {
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Liquid Mail", style = MaterialTheme.typography.titleLarge)
-            Text("Add your first account", color = TextSecondary)
+            item {
+                Text("Liquid Mail", style = MaterialTheme.typography.titleLarge)
+                Text("Add an account", color = TextSecondary)
+            }
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.weight(1f),
-            ) {
-                items(ProviderCatalog.all, key = { it.id }) { p ->
-                    val isSelected = selected == p.id
-                    GlassCard(
-                        haze = haze,
-                        tintAlpha = if (isSelected) 0.20f else 0.09f,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selected = p.id
-                                imapHost = p.imap.host
-                                smtpHost = p.smtp.host
-                                showManual = p.id == "custom"
-                            },
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            // Provider grid - 2 per row via chunked list
+            items(ProviderCatalog.all.chunked(2)) { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    row.forEach { p ->
+                        val isSelected = selected == p.id
+                        GlassCard(
+                            haze = haze,
+                            tintAlpha = if (isSelected) 0.22f else 0.09f,
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable {
+                                    selected = p.id
+                                    imapHost = p.imap.host
+                                    smtpHost = p.smtp.host
+                                    showManual = p.id == "custom"
+                                },
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        if (isSelected) LocalAccentGradient.current
-                                        else LocalCoolGradient.current
-                                    ),
-                                contentAlignment = Alignment.Center,
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                Text(p.displayName.first().toString(), color = OnAccent)
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text(p.displayName)
-                                if (p.auth == AuthType.APP_PASSWORD) {
-                                    Text(
-                                        p.passwordHint ?: "App password required",
-                                        color = TextSecondary,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
+                                Box(
+                                    modifier = Modifier
+                                        .size(32.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            if (isSelected) LocalAccentGradient.current
+                                            else LocalCoolGradient.current
+                                        ),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(p.displayName.first().toString(), color = OnAccent)
+                                }
+                                Column {
+                                    Text(p.displayName, style = MaterialTheme.typography.bodyMedium)
+                                    if (p.auth == AuthType.APP_PASSWORD) {
+                                        Text("app password", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                                    }
                                 }
                             }
                         }
                     }
+                    if (row.size == 1) Box(Modifier.weight(1f))
                 }
             }
 
-            val provider = ProviderCatalog.byId(selected)
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = {
-                        email = it
-                        ProviderCatalog.detect(it)?.let { p ->
-                            selected = p.id
-                            imapHost = p.imap.host
-                            smtpHost = p.smtp.host
-                        }
-                    },
-                    label = { Text("Email") },
-                    singleLine = true,
-                    shape = GlassShape.Field,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = {
-                        Text(if (provider?.auth == AuthType.APP_PASSWORD) "App password / auth code" else "Password")
-                    },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    shape = GlassShape.Field,
-                    colors = fieldColors,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                provider?.helpUrl?.let { url ->
-                    Text(
-                        "How to get a password",
-                        color = LiquidCyan,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.clickable {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            item {
+                val provider = ProviderCatalog.byId(selected)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = email,
+                        onValueChange = {
+                            email = it
+                            ProviderCatalog.detect(it)?.let { p ->
+                                selected = p.id
+                                imapHost = p.imap.host
+                                smtpHost = p.smtp.host
+                            }
                         },
-                    )
-                }
-                if (showManual) {
-                    OutlinedTextField(
-                        value = imapHost, onValueChange = { imapHost = it },
-                        label = { Text("IMAP host") }, singleLine = true,
-                        shape = GlassShape.Field, colors = fieldColors,
+                        label = { Text("Email") },
+                        singleLine = true,
+                        shape = GlassShape.Field,
+                        colors = fieldColors,
                         modifier = Modifier.fillMaxWidth(),
                     )
                     OutlinedTextField(
-                        value = smtpHost, onValueChange = { smtpHost = it },
-                        label = { Text("SMTP host") }, singleLine = true,
-                        shape = GlassShape.Field, colors = fieldColors,
+                        value = password,
+                        onValueChange = { password = it },
+                        label = { Text(if (provider?.auth == AuthType.APP_PASSWORD) "App password / auth code" else "Password") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        shape = GlassShape.Field,
+                        colors = fieldColors,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                }
-                when (val s = state) {
-                    is OnboardingState.Testing -> Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        CircularProgressIndicator(color = LiquidCyan, modifier = Modifier.size(18.dp))
-                        Text("Testing connection", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                    provider?.helpUrl?.let { url ->
+                        Text(
+                            "How to get a password",
+                            color = LiquidCyan,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.clickable {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            },
+                        )
                     }
-                    is OnboardingState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
-                    else -> {}
+                    if (showManual) {
+                        OutlinedTextField(
+                            value = imapHost, onValueChange = { imapHost = it },
+                            label = { Text("IMAP host") }, singleLine = true,
+                            shape = GlassShape.Field, colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        OutlinedTextField(
+                            value = smtpHost, onValueChange = { smtpHost = it },
+                            label = { Text("SMTP host") }, singleLine = true,
+                            shape = GlassShape.Field, colors = fieldColors,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    when (val s = state) {
+                        is OnboardingState.Testing -> Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            CircularProgressIndicator(color = LiquidCyan, modifier = Modifier.size(18.dp))
+                            Text("Testing connection", color = TextSecondary, style = MaterialTheme.typography.bodySmall)
+                        }
+                        is OnboardingState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
+                        else -> {}
+                    }
+                    GlassButton(
+                        onClick = { vm.addAccount(email, password, selected, imapHost, smtpHost) },
+                        enabled = email.contains('@') && password.isNotEmpty() && state !is OnboardingState.Testing,
+                        label = "Connect",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-                GlassButton(
-                    onClick = { vm.addAccount(email, password, selected, imapHost, smtpHost) },
-                    enabled = email.contains('@') && password.isNotEmpty() && state !is OnboardingState.Testing,
-                    label = "Connect",
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         }
     }

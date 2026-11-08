@@ -35,10 +35,21 @@ class InboxViewModel(
             }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
         }
 
+    private var currentFolder = "INBOX"
+
     @OptIn(ExperimentalCoroutinesApi::class)
-    val messages: Flow<PagingData<MessageEntity>> = activeAccount
-        .flatMapLatest { it?.let { a -> repo.inboxPager(a.id) } ?: flowOf(PagingData.empty()) }
+    fun messages(query: String): Flow<PagingData<MessageEntity>> = activeAccount
+        .flatMapLatest { account ->
+            if (account == null) flowOf(PagingData.empty())
+            else if (query.isBlank()) repo.inboxPager(account.id)
+            else repo.searchInbox(account.id, query)
+        }
         .cachedIn(viewModelScope)
+
+    fun folders(accountId: String) = repo.observeFolders(accountId)
+
+    fun folderMessages(accountId: String, folder: String) =
+        repo.folderPager(accountId, folder).cachedIn(viewModelScope)
 
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing

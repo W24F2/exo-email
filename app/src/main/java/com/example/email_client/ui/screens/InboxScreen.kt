@@ -1,28 +1,26 @@
 package com.example.email_client.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -42,12 +40,8 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
 import com.example.email_client.LiquidMailApp
 import com.example.email_client.ui.components.GlassCard
-import com.example.email_client.ui.components.GlassFab
-import com.example.email_client.ui.components.GlassTopBar
-import com.example.email_client.ui.components.LiquidBackdrop
 import com.example.email_client.ui.inbox.InboxViewModel
 import com.example.email_client.ui.inbox.InboxViewModelFactory
-import com.example.email_client.ui.theme.GlassStroke
 import com.example.email_client.ui.theme.LiquidPink
 import com.example.email_client.ui.theme.LocalCoolGradient
 import com.example.email_client.ui.theme.OnAccent
@@ -62,142 +56,149 @@ import java.util.Locale
 @Composable
 fun InboxScreen(
     app: LiquidMailApp,
+    haze: HazeState,
+    query: String,
     onOpenMessage: (String) -> Unit,
-    onCompose: () -> Unit,
-    onAccounts: () -> Unit,
 ) {
     val vm: InboxViewModel = viewModel(factory = InboxViewModelFactory(app))
-    val items = vm.messages.collectAsLazyPagingItems()
+    val items = vm.messages(query).collectAsLazyPagingItems()
     val refreshing by vm.refreshing.collectAsState()
     val account by vm.activeAccount.collectAsState()
-    val haze = remember { HazeState() }
 
-    LiquidBackdrop(haze = haze) {
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                GlassTopBar(
-                    title = "Inbox",
-                    subtitle = account?.email,
-                    actions = {
-                        IconButton(onClick = onAccounts) {
-                            Icon(Icons.Filled.AccountCircle, contentDescription = "Accounts")
-                        }
-                    },
-                    modifier = Modifier.statusBarsPadding(),
-                )
-            },
-            floatingActionButton = { GlassFab(onClick = onCompose) },
-        ) { padding ->
-            PullToRefreshBox(
-                isRefreshing = refreshing,
-                onRefresh = { vm.refresh() },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
-            ) {
-                if (items.itemCount == 0 && !refreshing) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        GlassCard(haze = haze) {
-                            Text(
-                                "All caught up",
-                                modifier = Modifier.padding(28.dp),
-                                color = TextSecondary,
-                            )
-                        }
-                    }
-                }
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                        top = 4.dp, bottom = 96.dp,
-                    ),
-                ) {
-                    items(
-                        count = items.itemCount,
-                        key = items.itemKey { it.id },
-                    ) { i ->
-                        val m = items[i] ?: return@items
-                        GlassCard(
-                            haze = haze,
-                            tintAlpha = if (m.isRead) 0.06f else 0.14f,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .clickable {
-                                    vm.markRead(m.id)
-                                    onOpenMessage(m.id)
-                                },
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                // gradient-ringed specular avatar
-                                Box(
-                                    modifier = Modifier
-                                        .size(44.dp)
-                                        .clip(CircleShape)
-                                        .background(LocalCoolGradient.current)
-                                        .padding(2.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .clip(CircleShape)
-                                            .background(
-                                                Brush.radialGradient(
-                                                    listOf(
-                                                        Color.White.copy(alpha = 0.35f),
-                                                        Color.White.copy(alpha = 0.08f),
-                                                    )
-                                                )
-                                            ),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Text(
-                                            m.senderName.take(1).uppercase(),
-                                            color = OnAccent,
-                                            fontWeight = FontWeight.Bold,
-                                        )
-                                    }
-                                }
-                                Column(Modifier.weight(1f)) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            m.senderName.ifBlank { m.sender },
-                                            fontWeight = if (m.isRead) FontWeight.Normal else FontWeight.SemiBold,
-                                            modifier = Modifier.weight(1f),
-                                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                        )
-                                        Text(formatDate(m.date), color = TextTertiary, style = MaterialTheme.typography.bodySmall)
-                                    }
-                                    Text(
-                                        m.subject,
-                                        fontWeight = if (m.isRead) FontWeight.Normal else FontWeight.Medium,
-                                        maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    )
-                                    Text(
-                                        m.snippet,
-                                        color = TextSecondary, maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                }
-                                IconButton(onClick = { vm.toggleStar(m.id, !m.isStarred) }) {
-                                    Icon(
-                                        if (m.isStarred) Icons.Filled.Star else Icons.Outlined.Star,
-                                        contentDescription = "Star",
-                                        tint = if (m.isStarred) LiquidPink else TextTertiary,
-                                    )
-                                }
-                            }
-                        }
-                    }
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = { vm.refresh() },
+        modifier = Modifier.fillMaxSize(),
+    ) {
+        if (items.itemCount == 0 && !refreshing) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                GlassCard(haze = haze) {
+                    Text(
+                        if (query.isBlank()) "All caught up" else "No results",
+                        modifier = Modifier.padding(28.dp),
+                        color = TextSecondary,
+                    )
                 }
             }
+        }
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+        ) {
+            item {
+                GlassCard(haze = haze, tintAlpha = 0.07f) {}
+            }
+            items(
+                count = items.itemCount,
+                key = items.itemKey { it.id },
+            ) { i ->
+                val m = items[i] ?: return@items
+                InboxRow(
+                    sender = m.senderName.ifBlank { m.sender },
+                    subject = m.subject,
+                    snippet = m.snippet,
+                    date = m.date,
+                    read = m.isRead,
+                    starred = m.isStarred,
+                    unread = !m.isRead,
+                    onClick = { vm.markRead(m.id); onOpenMessage(m.id) },
+                    onStar = { vm.toggleStar(m.id, !m.isStarred) },
+                )
+                if (i < items.itemCount - 1) {
+                    HorizontalDivider(
+                        color = Color.White.copy(alpha = 0.06f),
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun InboxRow(
+    sender: String,
+    subject: String,
+    snippet: String,
+    date: Long,
+    read: Boolean,
+    starred: Boolean,
+    unread: Boolean,
+    onClick: () -> Unit,
+    onStar: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Unread indicator dot
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(if (unread) LiquidPink else Color.Transparent),
+        )
+        // Avatar
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(LocalCoolGradient.current)
+                .padding(1.5.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.32f),
+                                Color.White.copy(alpha = 0.07f),
+                            )
+                        )
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    sender.take(1).uppercase(),
+                    color = OnAccent,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    sender,
+                    fontWeight = if (unread) FontWeight.SemiBold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1, overflow = TextOverflow.Ellipsis,
+                )
+                Text(formatDate(date), color = TextTertiary, style = MaterialTheme.typography.bodySmall)
+            }
+            Text(
+                subject,
+                fontWeight = if (unread) FontWeight.Medium else FontWeight.Normal,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                snippet,
+                color = TextSecondary, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        IconButton(onClick = onStar, modifier = Modifier.size(32.dp)) {
+            Icon(
+                if (starred) Icons.Filled.Star else Icons.Outlined.Star,
+                contentDescription = "Star",
+                tint = if (starred) LiquidPink else TextTertiary,
+            )
         }
     }
 }

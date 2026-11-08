@@ -1,5 +1,7 @@
 package com.example.email_client.data
 
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
 import com.example.email_client.core.mail.AccountConfig
 import com.example.email_client.core.mail.MailEngine
 import com.example.email_client.core.mail.ServerSpec
@@ -13,11 +15,16 @@ class MailRepository(
     private val engine: MailEngine,
 ) {
     fun observeAccounts() = db.accountDao().observeAll()
+    fun observeFolders(accountId: String) = db.folderDao().observe(accountId)
 
-    fun inboxPager(accountId: String) = androidx.paging.Pager(
-        config = androidx.paging.PagingConfig(pageSize = 40, prefetchDistance = 15, enablePlaceholders = false),
-        pagingSourceFactory = { db.messageDao().pagingInbox(accountId) },
+    private fun pager(factory: () -> androidx.paging.PagingSource<Int, MessageEntity>) = Pager(
+        config = PagingConfig(pageSize = 40, prefetchDistance = 15, enablePlaceholders = false),
+        pagingSourceFactory = factory,
     ).flow
+
+    fun inboxPager(accountId: String) = pager { db.messageDao().pagingFolder(accountId, "INBOX") }
+    fun folderPager(accountId: String, folder: String) = pager { db.messageDao().pagingFolder(accountId, folder) }
+    fun searchInbox(accountId: String, query: String) = pager { db.messageDao().searchInbox(accountId, query) }
 
     suspend fun account(id: String) = db.accountDao().get(id)
     suspend fun message(id: String) = db.messageDao().get(id)
