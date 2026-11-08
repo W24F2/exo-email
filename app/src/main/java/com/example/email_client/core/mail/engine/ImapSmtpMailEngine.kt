@@ -8,6 +8,7 @@ import com.example.email_client.core.mail.MailEngine
 import com.example.email_client.core.mail.MailMessage
 import com.example.email_client.core.mail.OutgoingMail
 import jakarta.mail.Flags
+import jakarta.mail.FetchProfile
 import jakarta.mail.Folder
 import jakarta.mail.Message
 import jakarta.mail.MessagingException
@@ -95,7 +96,18 @@ class ImapSmtpMailEngine : MailEngine {
                     if (count == 0) emptyList()
                     else f.getMessages(maxOf(1, count - limit + 1), count).toList()
                 }
-                uids.takeLast(limit).map { it.toMailMessage(f as? jakarta.mail.UIDFolder) }
+                val batch = uids.takeLast(limit)
+                // Envelope-only prefetch: headers, flags, sizes. NEVER bodies —
+                // downloading bodies here is what timed out big Gmail inboxes.
+                if (batch.isNotEmpty()) {
+                    val fp = FetchProfile().apply {
+                        add(FetchProfile.Item.ENVELOPE)
+                        add(FetchProfile.Item.FLAGS)
+                        add(FetchProfile.Item.CONTENT_INFO)
+                    }
+                    f.fetch(batch.toTypedArray(), fp)
+                }
+                batch.map { it.toMailMessage(f as? jakarta.mail.UIDFolder) }
                     .sortedByDescending { it.date }
             }
         }
@@ -174,14 +186,20 @@ class ImapSmtpMailEngine : MailEngine {
             snippet = runCatching { description ?: subject ?: "" }.getOrDefault("").take(140),
             isRead = flags.contains(Flags.Flag.SEEN),
             isStarred = flags.contains(Flags.Flag.FLAGGED),
-            hasAttachments = hasAttachments(),
+            hasAttachments = hasAttachmentsFromHeaders(),
         )
     }
 
-    private fun Part.hasAttachments(): Boolean = when (val c = content) {
-        is Multipart -> (0 until c.count).any { c.getBodyPart(it).hasAttachments() || Part.ATTACHMENT.equals(c.getBodyPart(it).disposition, true) }
-        else -> Part.ATTACHMENT.equals(disposition, true)
-    }
+    /**
+     * Header-based attachment check (Content-Type is prefetched with CONTENT_INFO).
+     * multipart/mixed almost always carries an attachment; multipart/alternative
+     * is just text+html variants. Avoids the old hasAttachments() which touched
+     * part.content and forced a full MIME body download per message during sync.
+     */
+    private fun Message.hasAttachmentsFromHeaders(): Boolean = runCatching {
+        contentType?.contains("multipart/mixed", true) == true ||
+            contentType?.contains("name=", true) == true
+    }.getOrDefault(false)
 
     private fun Message.extractBody(): MailBody {
         val text = StringBuilder()

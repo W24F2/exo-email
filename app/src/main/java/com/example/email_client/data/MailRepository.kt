@@ -72,7 +72,7 @@ class MailRepository(
 
     /** Sync INBOX envelopes since the last known UID and upsert into Room. */
     suspend fun refreshInbox(account: AccountEntity, password: String): Result<Int> =
-        kotlinx.coroutines.withTimeoutOrNull(25_000) { refreshInboxInner(account, password) }
+        kotlinx.coroutines.withTimeoutOrNull(60_000) { refreshInboxInner(account, password) }
             ?: Result.failure(java.util.concurrent.TimeoutException("IMAP sync timed out"))
 
     private suspend fun refreshInboxInner(account: AccountEntity, password: String): Result<Int> = runCatching {
