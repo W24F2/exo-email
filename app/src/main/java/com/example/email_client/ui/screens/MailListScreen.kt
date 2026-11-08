@@ -79,7 +79,7 @@ fun MailListScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             state = rememberLazyListState(),
-            contentPadding = PaddingValues(bottom = 12.dp),
+            contentPadding = PaddingValues(bottom = 104.dp),
         ) {
             if (title != null) {
                 item {

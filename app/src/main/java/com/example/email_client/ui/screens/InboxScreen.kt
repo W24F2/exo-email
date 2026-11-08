@@ -79,7 +79,7 @@ fun InboxScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 12.dp),
+            contentPadding = PaddingValues(bottom = 104.dp),
         ) {
             // Greeting header
             item {

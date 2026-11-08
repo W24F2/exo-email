@@ -34,7 +34,7 @@ fun FolderScreen(
     val items = vm.folderMessages(account!!.id, folder).collectAsLazyPagingItems()
 
     PullToRefreshBox(isRefreshing = refreshing, onRefresh = { vm.refresh() }, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 12.dp)) {
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 104.dp)) {
             items(
                 count = items.itemCount,
                 key = items.itemKey { it.id },

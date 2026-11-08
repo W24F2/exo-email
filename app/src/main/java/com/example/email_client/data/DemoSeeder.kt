@@ -52,6 +52,13 @@ object DemoSeeder {
             Sample("Mom", "Dinner on Sunday?", "Are you still coming over this weekend? Let me know.", now - 86_400_000),
             Sample("Netflix", "New arrivals this week", "Top picks for you based on your watch history.", now - 172_800_000),
             Sample("Bank", "Your monthly statement", "Your statement for November is now available.", now - 259_200_000),
+            Sample("Design Weekly", "Issue 214: Motion in Material", "This week: expressive springs, container transforms, and shape morphing.", now - 345_600_000),
+            Sample("LinkedIn", "5 new jobs match your profile", "Senior Android Engineer roles at companies you follow.", now - 432_000_000),
+            Sample("AWS", "Billing alert: EC2 spend up 12%", "Your month-to-date compute spend exceeded the forecast threshold.", now - 518_400_000),
+            Sample("Jira", "LM-118 moved to In Review", "Mail sync worker no longer retries on partial failure.", now - 604_800_000),
+            Sample("Figma", "Ricky commented on Glass dock", "\"Can we sample the live list behind the pill?\"", now - 691_200_000),
+            Sample("Newsletter", "Kotlin 2.2 release notes", "Context parameters stable, K2 enhancements, performance wins.", now - 777_600_000),
+            Sample("Travel", "Your boarding pass is ready", "Check in now for SYD → NRT, seat 14A, boarding 08:20.", now - 864_000_000),
         )
         db.messageDao().upsertAll(
             samples.mapIndexed { i, s ->
