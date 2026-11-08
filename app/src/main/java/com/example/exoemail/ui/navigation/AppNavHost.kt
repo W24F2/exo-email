@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.navigation
+package com.example.exoemail.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -80,7 +80,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = "Mail",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
@@ -98,7 +98,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = "Starred",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
@@ -111,7 +111,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = "Sent",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
@@ -124,7 +124,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = "Drafts",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
@@ -137,7 +137,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = "Folders",
                     query = query, onQueryChange = { query = it },
                     activeTab = currentTab, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
@@ -154,7 +154,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     title = r.folder,
                     query = query, onQueryChange = { query = it },
                     activeTab = FoldersRoute, onTab = { switchTab(it as Route) },
-                    onAvatar = { switchTab(AccountsRoute) },
+                    onAvatar = { navigate(AccountsRoute) },
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
