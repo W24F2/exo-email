@@ -61,12 +61,15 @@ fun ThreadScreen(
     onBack: () -> Unit,
     onReply: (String) -> Unit,
 ) {
-    val vm: ThreadViewModel = viewModel(factory = ThreadViewModelFactory(app, messageId))
+    val vm: ThreadViewModel = viewModel(factory = ThreadViewModelFactory(app))
     val message by vm.message.collectAsState()
     val body by vm.body.collectAsState()
     val attachments by vm.attachments.collectAsState()
     val inlineImages by vm.inlineImages.collectAsState()
     var showMenu by remember { mutableStateOf(false) }
+
+    // Switch the shared VM to this message (cancels stale in-flight fetches)
+    androidx.compose.runtime.LaunchedEffect(messageId) { vm.open(messageId) }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
