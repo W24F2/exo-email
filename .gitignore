@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+.kotlin/
+browser-screenshots/
+ui-dump.xml
