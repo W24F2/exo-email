@@ -1,0 +1,72 @@
+package com.example.email_client.data
+
+import com.example.email_client.core.mail.AccountConfig
+import com.example.email_client.core.mail.MailEngine
+import com.example.email_client.core.mail.ServerSpec
+import com.example.email_client.data.db.AccountEntity
+import com.example.email_client.data.db.AppDatabase
+import com.example.email_client.data.db.FolderEntity
+import com.example.email_client.data.db.MessageEntity
+
+class MailRepository(
+    private val db: AppDatabase,
+    private val engine: MailEngine,
+) {
+    fun observeAccounts() = db.accountDao().observeAll()
+
+    fun inboxPager(accountId: String) = androidx.paging.Pager(
+        config = androidx.paging.PagingConfig(pageSize = 40, prefetchDistance = 15, enablePlaceholders = false),
+        pagingSourceFactory = { db.messageDao().pagingInbox(accountId) },
+    ).flow
+
+    suspend fun account(id: String) = db.accountDao().get(id)
+    suspend fun message(id: String) = db.messageDao().get(id)
+    suspend fun addAccount(account: AccountEntity) = db.accountDao().upsert(account)
+
+    suspend fun markRead(id: String, read: Boolean) = db.messageDao().setRead(id, read)
+    suspend fun setStarred(id: String, starred: Boolean) = db.messageDao().setStarred(id, starred)
+
+    fun accountConfig(account: AccountEntity, password: String) = AccountConfig(
+        accountId = account.id,
+        email = account.email,
+        username = account.email,
+        password = password,
+        imap = ServerSpec(account.imapHost, account.imapPort, account.imapSsl),
+        smtp = ServerSpec(account.smtpHost, account.smtpPort, account.smtpSsl),
+    )
+
+    /** Sync INBOX envelopes since the last known UID and upsert into Room. */
+    suspend fun refreshInbox(account: AccountEntity, password: String): Result<Int> = runCatching {
+        val config = accountConfig(account, password)
+        val sinceUid = db.messageDao().maxUid(account.id) ?: 0L
+        val fetched = engine.fetchMessages(config, "INBOX", sinceUid = sinceUid, limit = 50)
+            .getOrThrow()
+        val entities = fetched.map { m ->
+            MessageEntity(
+                id = "${account.id}:INBOX:${m.uid}",
+                accountId = account.id,
+                folder = "INBOX",
+                uid = m.uid,
+                threadId = m.messageId ?: "${account.id}:${m.uid}",
+                subject = m.subject,
+                sender = m.sender,
+                senderName = m.senderName,
+                recipients = m.recipients,
+                date = m.date,
+                snippet = m.snippet,
+                isRead = m.isRead,
+                isStarred = m.isStarred,
+                hasAttachments = m.hasAttachments,
+                bodyPath = null,
+            )
+        }
+        db.messageDao().upsertAll(entities)
+        val folders = engine.fetchFolders(config).getOrDefault(emptyList())
+        db.folderDao().upsertAll(folders.map {
+            FolderEntity(account.id, it.name, it.displayName, it.unreadCount)
+        })
+        val maxUid = db.messageDao().maxUid(account.id) ?: sinceUid
+        db.accountDao().updateSyncState(account.id, System.currentTimeMillis(), maxUid)
+        entities.size
+    }
+}
