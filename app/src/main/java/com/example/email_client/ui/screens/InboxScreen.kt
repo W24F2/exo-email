@@ -22,6 +22,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -67,21 +69,49 @@ fun InboxScreen(
     // flag only drives the empty-state label so we surface a friendly CTA.
     val items = vm.messages(query).collectAsLazyPagingItems()
     val refreshing by vm.refreshing.collectAsState()
+    val syncError by vm.syncError.collectAsState()
 
     PullToRefreshBox(
         isRefreshing = refreshing,
         onRefresh = { vm.refresh() },
         modifier = Modifier.fillMaxSize(),
     ) {
+        if (items.itemCount == 0 && refreshing) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    Text("Loading your mail", color = TextSecondary)
+                }
+            }
+        }
         if (items.itemCount == 0 && !refreshing) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 GlassCard(haze = haze) {
-                    Text(
-                        if (!accountsExist) "Add an account to get started"
-                        else if (query.isBlank()) "All caught up" else "No results",
-                        modifier = Modifier.padding(28.dp),
-                        color = TextSecondary,
-                    )
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text(
+                            when {
+                                !accountsExist -> "Add an account to get started"
+                                syncError != null -> "Couldn't load mail"
+                                query.isBlank() -> "You're all caught up"
+                                else -> "No matching messages"
+                            },
+                            color = TextSecondary,
+                        )
+                        if (syncError != null) {
+                            Text(
+                                syncError!!,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            TextButton(onClick = { vm.refresh() }) { Text("Try again") }
+                        } else if (accountsExist && items.itemCount == 0 && query.isBlank()) {
+                            TextButton(onClick = { vm.refresh() }) { Text("Sync now") }
+                        }
+                    }
                 }
             }
         }
