@@ -12,10 +12,13 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.email_client.LiquidMailApp
 import com.example.email_client.ui.screens.AccountsScreen
 import com.example.email_client.ui.screens.ComposeScreen
+import com.example.email_client.ui.screens.DraftsScreen
 import com.example.email_client.ui.screens.FolderScreen
 import com.example.email_client.ui.screens.FoldersScreen
 import com.example.email_client.ui.screens.InboxScreen
 import com.example.email_client.ui.screens.OnboardingScreen
+import com.example.email_client.ui.screens.SentScreen
+import com.example.email_client.ui.screens.StarredScreen
 import com.example.email_client.ui.screens.ThreadScreen
 import com.example.email_client.ui.shell.LiquidShell
 import dev.chrisbanes.haze.HazeState
@@ -81,6 +84,45 @@ fun AppNavHost(app: LiquidMailApp) {
                         accountsExist = accountsExist,
                         onOpenMessage = { navigate(ThreadRoute(it)) },
                     )
+                }
+            }
+            entry<StarredRoute> {
+                LiquidShell(
+                    haze = haze, title = "Starred",
+                    query = query, onQueryChange = { query = it },
+                    activeTab = currentTab, onTab = { switchTab(it as Route) },
+                    onAvatar = { switchTab(AccountsRoute) },
+                    accountsExist = accountsExist,
+                    onAddAccount = { resetTo(OnboardingRoute) },
+                    accountInitial = "",
+                ) {
+                    StarredScreen(app = app, haze = haze, onOpenMessage = { navigate(ThreadRoute(it)) })
+                }
+            }
+            entry<SentRoute> {
+                LiquidShell(
+                    haze = haze, title = "Sent",
+                    query = query, onQueryChange = { query = it },
+                    activeTab = currentTab, onTab = { switchTab(it as Route) },
+                    onAvatar = { switchTab(AccountsRoute) },
+                    accountsExist = accountsExist,
+                    onAddAccount = { resetTo(OnboardingRoute) },
+                    accountInitial = "",
+                ) {
+                    SentScreen(app = app, haze = haze, onOpenMessage = { navigate(ThreadRoute(it)) })
+                }
+            }
+            entry<DraftsRoute> {
+                LiquidShell(
+                    haze = haze, title = "Drafts",
+                    query = query, onQueryChange = { query = it },
+                    activeTab = currentTab, onTab = { switchTab(it as Route) },
+                    onAvatar = { switchTab(AccountsRoute) },
+                    accountsExist = accountsExist,
+                    onAddAccount = { resetTo(OnboardingRoute) },
+                    accountInitial = "",
+                ) {
+                    DraftsScreen(app = app, haze = haze, onOpenMessage = { navigate(ComposeRoute()) })
                 }
             }
             entry<FoldersRoute> {

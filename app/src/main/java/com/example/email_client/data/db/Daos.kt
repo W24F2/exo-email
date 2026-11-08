@@ -67,6 +67,24 @@ interface MessageDao {
     @Query("SELECT MAX(uid) FROM messages WHERE accountId = :accountId AND folder = 'INBOX'")
     suspend fun maxUid(accountId: String): Long?
 
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND isStarred = 1 " +
+            "ORDER BY date DESC"
+    )
+    fun pagingStarred(accountId: String): PagingSource<Int, MessageEntity>
+
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'Sent' " +
+            "ORDER BY date DESC"
+    )
+    fun pagingSent(accountId: String): PagingSource<Int, MessageEntity>
+
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'Drafts' " +
+            "ORDER BY date DESC"
+    )
+    fun pagingDrafts(accountId: String): PagingSource<Int, MessageEntity>
+
     @Query("UPDATE messages SET folder = :folder WHERE id = :id")
     suspend fun moveTo(id: String, folder: String)
 }

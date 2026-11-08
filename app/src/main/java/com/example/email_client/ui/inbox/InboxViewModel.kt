@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+enum class InboxFilter { ALL, PRIMARY, SOCIAL, PROMOTIONS }
+
 class InboxViewModel(
     private val app: LiquidMailApp,
     private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
@@ -57,12 +59,22 @@ class InboxViewModel(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    fun messages(query: String): Flow<PagingData<MessageEntity>> = resolvedAccount
+    fun messages(query: String, filter: InboxFilter = InboxFilter.ALL): Flow<PagingData<MessageEntity>> = resolvedAccount
         .flatMapLatest { account ->
             if (account == null) flowOf(PagingData.empty())
-            else if (query.isBlank()) repo.inboxPager(account.id).cachedIn(viewModelScope)
-            else repo.searchInbox(account.id, query).cachedIn(viewModelScope)
+            else {
+                val base = if (query.isBlank()) repo.inboxPager(account.id)
+                    else repo.searchInbox(account.id, query)
+                // Category filter applied client-side via PagingData.map would be complex;
+                // for now ALL/PRIMARY/SOCIAL/PROMOTIONS all read from INBOX (IMAP categories
+                // would need server-side X-GM-LABELS or similar - kept simple for IMAP-only scope).
+                base.cachedIn(viewModelScope)
+            }
         }
+
+    fun starred(accountId: String) = repo.starredPager(accountId).cachedIn(viewModelScope)
+    fun sent(accountId: String) = repo.sentPager(accountId).cachedIn(viewModelScope)
+    fun drafts(accountId: String) = repo.draftsPager(accountId).cachedIn(viewModelScope)
 
     fun folders(accountId: String) = repo.observeFolders(accountId)
 

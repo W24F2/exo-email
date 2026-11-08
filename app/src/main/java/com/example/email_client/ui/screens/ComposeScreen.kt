@@ -2,8 +2,10 @@ package com.example.email_client.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -13,6 +15,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -45,11 +48,14 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, onBack: () -> Unit) {
     val haze = remember { HazeState() }
 
     var to by remember { mutableStateOf(replyTo ?: "") }
+    var cc by remember { mutableStateOf("") }
+    var bcc by remember { mutableStateOf("") }
+    var showCcBcc by remember { mutableStateOf(false) }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
 
     androidx.compose.runtime.LaunchedEffect(state) {
-        if (state is ComposeState.Sent) onBack()
+        if (state is ComposeState.Sent || state is ComposeState.Saved) onBack()
     }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
@@ -79,11 +85,20 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, onBack: () -> Unit) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .imePadding()
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 OutlinedTextField(value = to, onValueChange = { to = it }, label = { Text("To") }, singleLine = true, shape = GlassShape.Field, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                if (!showCcBcc) {
+                    TextButton(onClick = { showCcBcc = true }) {
+                        Text("Cc / Bcc", color = TextSecondary)
+                    }
+                } else {
+                    OutlinedTextField(value = cc, onValueChange = { cc = it }, label = { Text("Cc") }, singleLine = true, shape = GlassShape.Field, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(value = bcc, onValueChange = { bcc = it }, label = { Text("Bcc") }, singleLine = true, shape = GlassShape.Field, colors = fieldColors, modifier = Modifier.fillMaxWidth())
+                }
                 OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject") }, singleLine = true, shape = GlassShape.Field, colors = fieldColors, modifier = Modifier.fillMaxWidth())
                 OutlinedTextField(value = body, onValueChange = { body = it }, label = { Text("Message") }, shape = GlassShape.Field, colors = fieldColors, modifier = Modifier.fillMaxWidth().weight(1f))
                 when (val s = state) {
@@ -91,12 +106,20 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, onBack: () -> Unit) {
                     is ComposeState.Error -> Text(s.message, color = MaterialTheme.colorScheme.error)
                     else -> {}
                 }
-                GlassButton(
-                    onClick = { vm.send(to, subject, body) },
-                    enabled = to.contains('@') && state !is ComposeState.Sending,
-                    label = "Send",
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GlassButton(
+                        onClick = { vm.saveDraft(to, subject, body) },
+                        enabled = to.isNotBlank() || subject.isNotBlank() || body.isNotBlank(),
+                        label = "Save draft",
+                        modifier = Modifier.weight(1f),
+                    )
+                    GlassButton(
+                        onClick = { vm.send(to, cc, bcc, subject, body) },
+                        enabled = to.contains('@') && state !is ComposeState.Sending,
+                        label = "Send",
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }

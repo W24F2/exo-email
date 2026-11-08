@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import com.example.email_client.ui.theme.LocalIsDark
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -70,13 +71,16 @@ object GlassShape {
 fun Modifier.glass(
     shape: Shape = GlassShape.Surface,
     tintAlpha: Float = 0.10f,
+    dark: Boolean = true,
 ): Modifier = this
     .clip(shape)
     .background(
         Brush.verticalGradient(
             listOf(
-                GlassFill.copy(alpha = tintAlpha + 0.09f),
-                GlassFill.copy(alpha = tintAlpha * 0.55f),
+                if (dark) GlassFill.copy(alpha = tintAlpha + 0.09f)
+                else Color.Black.copy(alpha = tintAlpha * 0.4f),
+                if (dark) GlassFill.copy(alpha = tintAlpha * 0.55f)
+                else Color.Black.copy(alpha = tintAlpha * 0.2f),
             )
         )
     )
@@ -84,8 +88,10 @@ fun Modifier.glass(
         1.dp,
         Brush.verticalGradient(
             listOf(
-                GlassStroke.copy(alpha = 0.55f),
-                GlassStroke.copy(alpha = 0.10f),
+                if (dark) GlassStroke.copy(alpha = 0.55f)
+                else Color.Black.copy(alpha = 0.08f),
+                if (dark) GlassStroke.copy(alpha = 0.10f)
+                else Color.Black.copy(alpha = 0.02f),
             )
         ),
         shape,
@@ -99,7 +105,7 @@ fun Modifier.liquidGlass(
     shape: Shape = GlassShape.Surface,
     tintAlpha: Float = 0.10f,
 ): Modifier = if (haze == null) {
-    this.glass(shape, tintAlpha)
+    this.glass(shape, tintAlpha, dark = LocalIsDark.current)
 } else {
     this
         .clip(shape)
@@ -229,13 +235,15 @@ fun GlassSearchBar(
                     .fillMaxWidth()
                     .height(40.dp)
                     .clip(GlassShape.Pill)
-                    .background(GlassFill.copy(alpha = 0.08f))
+                    .background(GlassFill.copy(alpha = if (LocalIsDark.current) 0.08f else 0.5f))
                     .border(
                         1.dp,
                         Brush.verticalGradient(
                             listOf(
-                                GlassStroke.copy(alpha = 0.25f),
-                                GlassStroke.copy(alpha = 0.06f),
+                                if (LocalIsDark.current) GlassStroke.copy(alpha = 0.25f)
+                                else Color.Black.copy(alpha = 0.06f),
+                                if (LocalIsDark.current) GlassStroke.copy(alpha = 0.06f)
+                                else Color.Black.copy(alpha = 0.02f),
                             )
                         ),
                         GlassShape.Pill,

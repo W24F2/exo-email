@@ -49,6 +49,7 @@ data class MessageEntity(
     val isRead: Boolean,
     val isStarred: Boolean,
     val hasAttachments: Boolean,
+    val isDraft: Boolean = false,
     val bodyPath: String?,
 )
 

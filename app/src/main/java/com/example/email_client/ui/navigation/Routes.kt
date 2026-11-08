@@ -5,6 +5,9 @@ data object OnboardingRoute : Route
 
 // Top-level tabs inside the shell
 data object InboxRoute : Route
+data object StarredRoute : Route
+data object SentRoute : Route
+data object DraftsRoute : Route
 data object FoldersRoute : Route
 data class FolderRoute(val folder: String) : Route
 data object AccountsRoute : Route

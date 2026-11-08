@@ -25,6 +25,9 @@ class MailRepository(
     fun inboxPager(accountId: String) = pager { db.messageDao().pagingFolder(accountId, "INBOX") }
     fun folderPager(accountId: String, folder: String) = pager { db.messageDao().pagingFolder(accountId, folder) }
     fun searchInbox(accountId: String, query: String) = pager { db.messageDao().searchInbox(accountId, query) }
+    fun starredPager(accountId: String) = pager { db.messageDao().pagingStarred(accountId) }
+    fun sentPager(accountId: String) = pager { db.messageDao().pagingSent(accountId) }
+    fun draftsPager(accountId: String) = pager { db.messageDao().pagingDrafts(accountId) }
 
     suspend fun account(id: String) = db.accountDao().get(id)
     suspend fun message(id: String) = db.messageDao().get(id)
@@ -32,6 +35,19 @@ class MailRepository(
 
     suspend fun markRead(id: String, read: Boolean) = db.messageDao().setRead(id, read)
     suspend fun setStarred(id: String, starred: Boolean) = db.messageDao().setStarred(id, starred)
+
+    suspend fun saveDraft(accountId: String, to: String, subject: String, body: String) {
+        val id = "${accountId}:Drafts:${System.currentTimeMillis()}"
+        db.messageDao().upsertAll(listOf(
+            MessageEntity(
+                id = id, accountId = accountId, folder = "Drafts", uid = 0,
+                threadId = "", subject = subject, sender = "",
+                senderName = "Draft", recipients = to, date = System.currentTimeMillis(),
+                snippet = body.take(140), isRead = true, isStarred = false,
+                hasAttachments = false, isDraft = true, bodyPath = null,
+            )
+        ))
+    }
 
     fun accountConfig(account: AccountEntity, password: String) = AccountConfig(
         accountId = account.id,

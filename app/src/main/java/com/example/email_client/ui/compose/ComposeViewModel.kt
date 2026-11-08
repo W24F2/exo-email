@@ -18,6 +18,7 @@ sealed interface ComposeState {
     data object Idle : ComposeState
     data object Sending : ComposeState
     data object Sent : ComposeState
+    data object Saved : ComposeState
     data class Error(val message: String) : ComposeState
 }
 
@@ -31,22 +32,56 @@ class ComposeViewModel(
     private val _state = MutableStateFlow<ComposeState>(ComposeState.Idle)
     val state: StateFlow<ComposeState> = _state
 
-    fun send(to: String, subject: String, body: String) {
+    private suspend fun activeAccount(): Pair<com.example.email_client.data.db.AccountEntity, String>? {
+        val activeId = app.settings.activeAccountId.first()
+        val account = activeId?.let { app.database.accountDao().get(it) }
+            ?: app.database.accountDao().first()
+        val secret = account?.let { credentials.get(it.id)?.secret }
+        return if (account != null && secret != null) account to secret else null
+    }
+
+    fun send(to: String, cc: String, bcc: String, subject: String, body: String) {
         viewModelScope.launch {
             _state.value = ComposeState.Sending
-            val activeId = app.settings.activeAccountId.first()
-            val account = activeId?.let { app.database.accountDao().get(it) }
-                ?: app.database.accountDao().first()
-            val secret = account?.let { credentials.get(it.id)?.secret }
-            if (account == null || secret == null) {
-                _state.value = ComposeState.Error("No account configured")
-                return@launch
-            }
+            val (account, secret) = activeAccount()
+                ?: run { _state.value = ComposeState.Error("No account configured"); return@launch }
+            val toList = to.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val ccList = cc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val bccList = bcc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             engine.send(
                 repo.accountConfig(account, secret),
-                OutgoingMail(to = listOf(to), subject = subject, body = body),
-            ).onSuccess { _state.value = ComposeState.Sent }
+                OutgoingMail(
+                    to = toList,
+                    cc = ccList + bccList,
+                    subject = subject,
+                    body = body,
+                ),
+            ).onSuccess {
+                _state.value = ComposeState.Sent
+                // also save to Sent folder locally so Sent tab shows it
+                runCatching {
+                    val id = "${account.id}:Sent:${System.currentTimeMillis()}"
+                    app.database.messageDao().upsertAll(listOf(
+                        com.example.email_client.data.db.MessageEntity(
+                            id = id, accountId = account.id, folder = "Sent", uid = 0,
+                            threadId = "", subject = subject, sender = account.email,
+                            senderName = account.displayName, recipients = to,
+                            date = System.currentTimeMillis(), snippet = body.take(140),
+                            isRead = true, isStarred = false, hasAttachments = false,
+                            isDraft = false, bodyPath = null,
+                        )
+                    ))
+                }
+            }
                 .onFailure { _state.value = ComposeState.Error(it.message ?: "Send failed") }
+        }
+    }
+
+    fun saveDraft(to: String, subject: String, body: String) {
+        viewModelScope.launch {
+            val (account, _) = activeAccount() ?: return@launch
+            repo.saveDraft(account.id, to, subject, body)
+            _state.value = ComposeState.Saved
         }
     }
 }

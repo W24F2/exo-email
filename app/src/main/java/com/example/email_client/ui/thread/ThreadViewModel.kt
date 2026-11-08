@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.email_client.LiquidMailApp
 import com.example.email_client.core.mail.MailBody
+import com.example.email_client.core.mail.AttachmentMeta
 import com.example.email_client.core.mail.engine.MailEngineFactory
 import com.example.email_client.core.security.CredentialStore
 import com.example.email_client.data.MailRepository
@@ -25,6 +26,8 @@ class ThreadViewModel(
     val message: StateFlow<MessageEntity?> = _message
     private val _body = MutableStateFlow<MailBody?>(null)
     val body: StateFlow<MailBody?> = _body
+    private val _attachments = MutableStateFlow<List<AttachmentMeta>>(emptyList())
+    val attachments: StateFlow<List<AttachmentMeta>> = _attachments
 
     init {
         viewModelScope.launch {
@@ -36,7 +39,10 @@ class ThreadViewModel(
                 val secret = account?.let { credentials.get(it.id)?.secret }
                 if (account != null && secret != null) {
                     engine.fetchBody(repo.accountConfig(account, secret), m.folder, m.uid)
-                        .onSuccess { _body.value = it }
+                        .onSuccess {
+                            _body.value = it
+                            _attachments.value = it.attachments
+                        }
                 }
             }
         }
