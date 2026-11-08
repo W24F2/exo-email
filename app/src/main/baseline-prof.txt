@@ -1,0 +1,9 @@
+HSPLcom/example/email_client/MainActivity;-><init>()V
+HSPLcom/example/email_client/MainActivity;->onCreate(Landroid/os/Bundle;)V
+HSPLcom/example/email_client/ui/navigation/AppNavHostKt;->AppNavHost(Lcom/example/email_client/LiquidMailApp;Landroidx/compose/runtime/Composer;I)V
+HSPLcom/example/email_client/ui/theme/ThemeKt;->LiquidMailTheme(Lkotlin/jvm/functions/Function2;Landroidx/compose/runtime/Composer;I)V
+HSPLcom/example/email_client/ui/components/LiquidBackdropKt;->LiquidBackdrop(Lkotlin/jvm/functions/Function3;Landroidx/compose/runtime/Composer;I)V
+HSPLcom/example/email_client/ui/screens/InboxScreenKt;->InboxScreen(Lcom/example/email_client/LiquidMailApp;Lkotlin/jvm/functions/Function1;Lkotlin/jvm/functions/Function0;Lkotlin/jvm/functions/Function0;Landroidx/compose/runtime/Composer;I)V
+PLcom/example/email_client/data/db/MessageDao;->pagingInbox(Ljava/lang/String;)Landroidx/paging/PagingSource;
+PLcom/example/email_client/data/db/AccountDao;->observeAll()Lkotlinx/coroutines/flow/Flow;
+PLandroidx/paging/PagingDataDiffer;-><init>()V

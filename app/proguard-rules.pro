@@ -8,3 +8,8 @@
 -dontwarn jakarta.mail.**
 -dontwarn java.awt.**
 -dontwarn javax.security.**
+
+# R8 missing-annotation / optional-class warnings
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn javax.annotation.**
+-dontwarn org.graalvm.nativeimage.**
