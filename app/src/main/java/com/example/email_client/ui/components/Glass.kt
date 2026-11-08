@@ -1,21 +1,23 @@
 package com.example.email_client.ui.components
 
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -29,26 +31,41 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.email_client.ui.theme.GlassFill
 import com.example.email_client.ui.theme.GlassStroke
 import com.example.email_client.ui.theme.LocalAccentGradient
 import com.example.email_client.ui.theme.OnAccent
 import com.example.email_client.ui.theme.TextSecondary
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.materials.ExperimentalHazeMaterialsApi
+import dev.chrisbanes.haze.materials.HazeMaterials
 
+/** Corner-radius scale for the whole app: 28dp surfaces, 24dp fields, pill buttons. */
+object GlassShape {
+    val Surface = RoundedCornerShape(28.dp)
+    val Field = RoundedCornerShape(20.dp)
+    val Chip = RoundedCornerShape(16.dp)
+    val Pill = RoundedCornerShape(50)
+}
+
+/**
+ * Liquid-glass fill: vertical white gradient + 1px gradient border + top specular.
+ * Apply on top of a [hazeEffect] surface for real backdrop blur.
+ */
 fun Modifier.glass(
-    shape: Shape = RoundedCornerShape(28.dp),
-    tintAlpha: Float = 0.12f,
+    shape: Shape = GlassShape.Surface,
+    tintAlpha: Float = 0.10f,
 ): Modifier = this
     .clip(shape)
     .background(
         Brush.verticalGradient(
             listOf(
-                GlassFill.copy(alpha = tintAlpha + 0.10f),
-                GlassFill.copy(alpha = tintAlpha),
+                GlassFill.copy(alpha = tintAlpha + 0.09f),
+                GlassFill.copy(alpha = tintAlpha * 0.55f),
             )
         )
     )
@@ -56,28 +73,41 @@ fun Modifier.glass(
         1.dp,
         Brush.verticalGradient(
             listOf(
-                GlassStroke.copy(alpha = 0.45f),
+                GlassStroke.copy(alpha = 0.55f),
                 GlassStroke.copy(alpha = 0.10f),
             )
         ),
         shape,
     )
 
-/** Blur layer for content behind a frosted surface. minSdk 37 => RenderEffect always available. */
-fun Modifier.glassBlur(radius: Dp = 28.dp): Modifier = this.graphicsLayer {
-    renderEffect = RenderEffect.createBlurEffect(
-        radius.toPx(), radius.toPx(), Shader.TileMode.DECAL
-    ).asComposeRenderEffect()
+/** Frosted surface that blurs whatever the [HazeState] source drew behind it. */
+@OptIn(ExperimentalHazeMaterialsApi::class)
+@Composable
+fun Modifier.liquidGlass(
+    haze: HazeState?,
+    shape: Shape = GlassShape.Surface,
+    tintAlpha: Float = 0.10f,
+): Modifier = if (haze == null) {
+    this.glass(shape, tintAlpha)
+} else {
+    this
+        .clip(shape)
+        .hazeEffect(
+            state = haze,
+            style = HazeMaterials.ultraThin(containerColor = MaterialTheme.colorScheme.surface),
+        )
+        .glass(shape, tintAlpha)
 }
 
 @Composable
 fun GlassCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(28.dp),
-    tintAlpha: Float = 0.12f,
+    haze: HazeState? = null,
+    shape: Shape = GlassShape.Surface,
+    tintAlpha: Float = 0.10f,
     content: @Composable BoxScope.() -> Unit,
 ) {
-    Box(modifier = modifier.glass(shape = shape, tintAlpha = tintAlpha), content = content)
+    Box(modifier = modifier.liquidGlass(haze, shape, tintAlpha), content = content)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,11 +115,17 @@ fun GlassCard(
 fun GlassTopBar(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     TopAppBar(
-        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        title = {
+            androidx.compose.foundation.layout.Column {
+                Text(title, style = MaterialTheme.typography.titleLarge)
+                subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = TextSecondary) }
+            }
+        },
         navigationIcon = navigationIcon,
         actions = actions,
         colors = TopAppBarDefaults.topAppBarColors(
@@ -111,8 +147,10 @@ fun GlassFab(
     FloatingActionButton(
         onClick = onClick,
         modifier = modifier,
+        shape = GlassShape.Pill,
         containerColor = Color.Transparent,
         contentColor = OnAccent,
+        elevation = FloatingActionButtonDefaults.elevation(0.dp),
     ) {
         Box(
             modifier = Modifier
@@ -120,6 +158,29 @@ fun GlassFab(
                 .background(LocalAccentGradient.current),
             contentAlignment = Alignment.Center,
         ) { content() }
+    }
+}
+
+@Composable
+fun GlassButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    label: String,
+) {
+    val shape = GlassShape.Pill
+    Box(
+        modifier = modifier
+            .clip(shape)
+            .background(
+                if (enabled) LocalAccentGradient.current
+                else Brush.linearGradient(listOf(Color(0x33FFFFFF), Color(0x22FFFFFF)))
+            )
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 28.dp, vertical = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, color = if (enabled) OnAccent else TextSecondary, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -144,9 +205,15 @@ fun GlassSearchBar(
             focusedTextColor = MaterialTheme.colorScheme.onBackground,
             unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
         ),
-        shape = RoundedCornerShape(24.dp),
+        shape = GlassShape.Field,
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
+            .border(
+                1.dp,
+                Brush.verticalGradient(
+                    listOf(GlassStroke.copy(alpha = 0.35f), GlassStroke.copy(alpha = 0.10f))
+                ),
+                GlassShape.Field,
+            ),
     )
 }
