@@ -17,3 +17,6 @@ local.properties
 .kotlin/
 browser-screenshots/
 ui-dump.xml
+
+ui*.xml
+build-log.txt
