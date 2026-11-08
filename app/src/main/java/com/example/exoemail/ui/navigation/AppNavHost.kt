@@ -73,7 +73,11 @@ fun AppNavHost(app: LiquidMailApp) {
         onBack = back,
         entryProvider = entryProvider {
             entry<OnboardingRoute> {
-                OnboardingScreen(app = app, onDone = { resetTo(InboxRoute) })
+                OnboardingScreen(
+                    app = app,
+                    onDone = { resetTo(InboxRoute) },
+                    onBack = if (backStack.size > 1) back else null,
+                )
             }
             entry<InboxRoute> {
                 LiquidShell(
@@ -84,6 +88,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     InboxScreen(
                         app = app,
@@ -102,6 +107,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     StarredScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
@@ -115,6 +121,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     SentScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
@@ -128,6 +135,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     DraftsScreen(app = app, onOpenDraft = { navigate(ComposeRoute(draftId = it)) })
                 }
@@ -141,6 +149,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     FoldersScreen(
                         app = app,
@@ -158,6 +167,8 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onBack = back,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     FolderScreen(app = app, folder = r.folder, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
@@ -171,6 +182,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     accountsExist = accountsExist,
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
+                    onCompose = { navigate(ComposeRoute()) },
                 ) {
                     AccountsScreen(app = app, onBack = back, onAddAccount = { navigate(OnboardingRoute) })
                 }

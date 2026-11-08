@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.shell
+package com.example.exoemail.ui.shell
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.Email
@@ -42,7 +43,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import com.example.exoemail.ui.components.GlassButton
 import com.example.exoemail.ui.components.GlassSearchBar
-import com.example.exoemail.ui.navigation.ComposeRoute
 import com.example.exoemail.ui.navigation.DraftsRoute
 import com.example.exoemail.ui.navigation.FolderRoute
 import com.example.exoemail.ui.navigation.FoldersRoute
@@ -86,6 +86,10 @@ fun LiquidShell(
     accountsExist: Boolean,
     onAddAccount: () -> Unit,
     accountInitial: String,
+    /** When non-null, shows a back arrow at the start of the top bar (pushed detail screens). */
+    onBack: (() -> Unit)? = null,
+    /** Compose action — pushed as a detail route (not a tab switch). */
+    onCompose: () -> Unit = {},
     content: @Composable BoxScope.() -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -116,6 +120,22 @@ fun LiquidShell(
                 .padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (onBack != null) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .clickable { onBack() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = MaterialTheme.colorScheme.onBackground,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
                     .size(36.dp)
@@ -153,7 +173,7 @@ fun LiquidShell(
                 hazeState = hazeState,
                 activeTab = activeTab,
                 onTab = onTab,
-                onCompose = { onTab(ComposeRoute()) },
+                onCompose = onCompose,
                 showCompose = accountsExist,
                 haptics = haptics,
             )

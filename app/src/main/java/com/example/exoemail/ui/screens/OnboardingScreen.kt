@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.screens
+package com.example.exoemail.ui.screens
 
 import android.content.Intent
 import android.net.Uri
@@ -16,8 +16,12 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -45,7 +49,7 @@ import com.example.exoemail.ui.onboarding.OnboardingViewModel
 import com.example.exoemail.ui.onboarding.OnboardingViewModelFactory
 
 @Composable
-fun OnboardingScreen(app: LiquidMailApp, onDone: () -> Unit) {
+fun OnboardingScreen(app: LiquidMailApp, onDone: () -> Unit, onBack: (() -> Unit)? = null) {
     val vm: OnboardingViewModel = viewModel(factory = OnboardingViewModelFactory(app))
     val state by vm.state.collectAsState()
     val context = LocalContext.current
@@ -81,8 +85,21 @@ fun OnboardingScreen(app: LiquidMailApp, onDone: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text("Liquid Mail", style = MaterialTheme.typography.headlineSmall)
-            Text("Add an account", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (onBack != null) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = MaterialTheme.colorScheme.onBackground,
+                        )
+                    }
+                }
+                Column {
+                    Text("Exo Mail", style = MaterialTheme.typography.headlineSmall)
+                    Text("Add an account", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
 
         // Provider grid - 2 per row via chunked list
