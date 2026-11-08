@@ -20,3 +20,5 @@ ui-dump.xml
 
 ui*.xml
 build-log.txt
+
+.agents/
