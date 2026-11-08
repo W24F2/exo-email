@@ -1,4 +1,4 @@
-pluginManagement {
+﻿pluginManagement {
     repositories {
         google {
             content {
@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Email-client"
+rootProject.name = "exo-email"
 include(":app")
  

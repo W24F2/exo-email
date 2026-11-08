@@ -1,17 +1,17 @@
-plugins {
+﻿plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.ksp)
     alias(libs.plugins.compose.compiler)
 }
 
 android {
-    namespace = "com.example.email_client"
+    namespace = "com.example.exoemail"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.example.email_client"
+        applicationId = "com.example.exoemail"
         minSdk = 37
         targetSdk = 37
         versionCode = 1
