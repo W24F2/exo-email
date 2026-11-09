@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.inbox
+package com.example.exoemail.ui.inbox
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -27,9 +27,7 @@ enum class InboxFilter { ALL, UNREAD, STARRED }
 
 class InboxViewModel(
     private val app: LiquidMailApp,
-    private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
-    private val credentials: CredentialStore = CredentialStore(app),
-    private val engine: com.example.exoemail.core.mail.MailEngine = MailEngineFactory.create(),
+    private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create(), CredentialStore(app)),
 ) : ViewModel() {
 
     val accounts: StateFlow<List<AccountEntity>> = repo.observeAccounts()
@@ -101,16 +99,13 @@ class InboxViewModel(
         _refreshing.value = true
         _syncError.value = null
         try {
-            val creds = runCatching { credentials.get(account.id) }.getOrNull()
-            val secret = creds?.secret
-            if (secret == null) {
-                // No stored credential (e.g. demo/offline account) â€” don't treat as error
-                _syncError.value = null
-                return
-            }
-            repo.refreshInbox(account, secret)
+            repo.refreshInbox(account)
                 .onSuccess { _syncError.value = null }
-                .onFailure { _syncError.value = it.message ?: "Couldn't load mail. Check your connection and account settings." }
+                .onFailure { e ->
+                    // Missing credential = offline/demo account, not an error.
+                    _syncError.value = if (e is MailRepository.NoCredential) null
+                        else e.message ?: "Couldn't load mail. Check your connection and account settings."
+                }
         } catch (e: Exception) {
             _syncError.value = e.message ?: "Couldn't load mail. Check your connection and account settings."
         } finally {
@@ -118,32 +113,13 @@ class InboxViewModel(
         }
     }
 
-    /** Optimistic local update, then push the flag to the server best-effort. */
+    /** Optimistic local update; the repo pushes the flag to the server. */
     fun markRead(id: String, read: Boolean = true) {
-        viewModelScope.launch {
-            repo.markRead(id, read)
-            syncFlag(id) { acc, folder, uid, cfg -> engine.markRead(cfg, folder, uid, read) }
-        }
+        viewModelScope.launch { repo.markRead(id, read) }
     }
 
     fun toggleStar(id: String, starred: Boolean) {
-        viewModelScope.launch {
-            repo.setStarred(id, starred)
-            syncFlag(id) { acc, folder, uid, cfg -> engine.setStarred(cfg, folder, uid, starred) }
-        }
-    }
-
-    private suspend fun syncFlag(
-        id: String,
-        call: suspend (AccountEntity, String, Long, com.example.exoemail.core.mail.AccountConfig) -> Result<Unit>,
-    ) {
-        val msg = app.database.messageDao().get(id) ?: return
-        val account = app.database.accountDao().get(msg.accountId) ?: return
-        val secret = runCatching { credentials.get(account.id)?.secret }.getOrNull() ?: return
-        val config = repo.accountConfig(account, secret)
-        // uid=0 rows (drafts/sent placeholders) have no server counterpart
-        if (msg.uid == 0L) return
-        runCatching { call(account, msg.folder, msg.uid, config) }
+        viewModelScope.launch { repo.setStarred(id, starred) }
     }
 }
 

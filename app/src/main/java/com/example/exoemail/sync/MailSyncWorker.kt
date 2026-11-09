@@ -16,16 +16,14 @@ class MailSyncWorker(
 
     override suspend fun doWork(): Result {
         val app = applicationContext as LiquidMailApp
-        val repo = MailRepository(app.database, MailEngineFactory.create())
-        val credentials = CredentialStore(app)
+        val repo = MailRepository(app.database, MailEngineFactory.create(), CredentialStore(app))
         val accounts = app.database.accountDao().observeAll().first().filter { it.syncEnabled }
         var synced = 0
         var failed = false
         for (account in accounts) {
-            val secret = credentials.get(account.id)?.secret ?: continue
-            repo.refreshInbox(account, secret)
+            repo.refreshInbox(account)
                 .onSuccess { synced += it }
-                .onFailure { failed = true }
+                .onFailure { if (it !is MailRepository.NoCredential) failed = true }
         }
         // Keep the launcher badge in sync with total unread across accounts,
         // and only alert when there is genuinely new mail.

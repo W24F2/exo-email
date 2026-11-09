@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.exoemail.LiquidMailApp
-import com.example.exoemail.core.mail.MailEngine
 import com.example.exoemail.core.mail.OutgoingMail
 import com.example.exoemail.core.mail.engine.MailEngineFactory
 import com.example.exoemail.core.security.CredentialStore
@@ -42,9 +41,7 @@ class ComposeViewModel(
     private val replySubject: String? = null,
     private val quotedBody: String? = null,
     private val forward: Boolean = false,
-    private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
-    private val credentials: CredentialStore = CredentialStore(app),
-    private val engine: MailEngine = MailEngineFactory.create(),
+    private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create(), CredentialStore(app)),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ComposeState>(ComposeState.Idle)
@@ -116,25 +113,22 @@ class ComposeViewModel(
         }
     }
 
-    private suspend fun activeAccount(): Pair<com.example.exoemail.data.db.AccountEntity, String>? {
+    private suspend fun activeAccount(): com.example.exoemail.data.db.AccountEntity? {
         val activeId = app.settings.activeAccountId.first()
-        val account = activeId?.let { app.database.accountDao().get(it) }
-            ?: app.database.accountDao().first()
-        val secret = account?.let { credentials.get(it.id)?.secret }
-        return if (account != null && secret != null) account to secret else null
+        return activeId?.let { repo.account(it) } ?: repo.firstAccount()
     }
 
     fun send(to: String, cc: String, bcc: String, subject: String, body: String) {
         viewModelScope.launch {
             _state.value = ComposeState.Sending
-            val (account, secret) = activeAccount()
+            val account = activeAccount()
                 ?: run { _state.value = ComposeState.Error("No account configured"); return@launch }
             val toList = to.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val ccList = cc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val bccList = bcc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val currentDraft = _draft.value ?: ComposeDraft()
-            engine.send(
-                repo.accountConfig(account, secret),
+            repo.send(
+                account,
                 OutgoingMail(
                     to = toList,
                     cc = ccList,
@@ -171,7 +165,7 @@ class ComposeViewModel(
 
     fun saveDraft(to: String, subject: String, body: String) {
         viewModelScope.launch {
-            val (account, _) = activeAccount() ?: return@launch
+            val account = activeAccount() ?: return@launch
             if (draftId != null) {
                 repo.updateDraft(draftId, to, subject, body)
             } else {
