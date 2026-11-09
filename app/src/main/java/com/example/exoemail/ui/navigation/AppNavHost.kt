@@ -1,5 +1,6 @@
 package com.example.exoemail.ui.navigation
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -59,6 +60,22 @@ fun AppNavHost(app: LiquidMailApp) {
 
     var query by remember { mutableStateOf("") }
     val currentTab = backStack.firstOrNull() ?: OnboardingRoute
+
+    // POST_NOTIFICATIONS is a runtime permission on Android 13+ — without this
+    // request the new-mail notifications and badges would be silently blocked.
+    val notifPermission = rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission(),
+    ) { }
+    androidx.compose.runtime.LaunchedEffect(accountsExist) {
+        if (accountsExist &&
+            android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app, android.Manifest.permission.POST_NOTIFICATIONS,
+            ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) {
+            notifPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     // Resolve the active account's initial for the avatar once accounts load.
     val accountInitial by produceState<String>(initialValue = "") {
