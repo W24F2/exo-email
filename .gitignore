@@ -22,3 +22,6 @@ ui*.xml
 build-log.txt
 
 .agents/
+
+# UI debug dumps
+/*.xml
