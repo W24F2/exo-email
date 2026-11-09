@@ -62,6 +62,24 @@ class ComposeViewModel(
             com.example.exoemail.core.mail.OutgoingAttachment(fileName, mimeType, bytes)
     }
 
+    /** Read the picked file off the main thread, then stage it. */
+    fun addAttachment(context: android.content.Context, uri: android.net.Uri) {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val resolver = context.contentResolver
+            val name = run {
+                var n = "attachment"
+                resolver.query(uri, null, null, null, null)?.use { c ->
+                    val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                    if (i >= 0 && c.moveToFirst()) n = c.getString(i) ?: n
+                }
+                n
+            }
+            val mime = resolver.getType(uri) ?: "application/octet-stream"
+            val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@launch
+            addAttachment(name, mime, bytes)
+        }
+    }
+
     fun removeAttachment(index: Int) {
         _attachments.value = _attachments.value.filterIndexed { i, _ -> i != index }
     }

@@ -96,13 +96,16 @@ fun AppNavHost(app: LiquidMailApp) {
             value = list.associate { it.folder to it.cnt }
         }
     }
-    // Map server folder names onto tab routes.
-    val tabUnread = mapOf(
-        "InboxRoute" to (unreadByFolder["INBOX"] ?: 0),
-        "StarredRoute" to (unreadByFolder["Starred"] ?: 0),
-        "SentRoute" to (unreadByFolder["Sent"] ?: 0),
-        "DraftsRoute" to (unreadByFolder["Drafts"] ?: 0),
-    )
+    // Map server folder names onto tab routes — remembered so LiquidShell
+    // gets a stable Map instance and stays skippable.
+    val tabUnread = remember(unreadByFolder) {
+        mapOf(
+            "InboxRoute" to (unreadByFolder["INBOX"] ?: 0),
+            "StarredRoute" to (unreadByFolder["Starred"] ?: 0),
+            "SentRoute" to (unreadByFolder["Sent"] ?: 0),
+            "DraftsRoute" to (unreadByFolder["Drafts"] ?: 0),
+        )
+    }
 
     NavDisplay(
         backStack = backStack,

@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.screens
+package com.example.exoemail.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -320,9 +320,10 @@ internal fun InboxRow(
     }
 }
 
+private val timeFmt = ThreadLocal.withInitial { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+private val dayFmt = ThreadLocal.withInitial { SimpleDateFormat("MMM d", Locale.getDefault()) }
+
 private fun formatDate(ts: Long): String {
-    val now = System.currentTimeMillis()
-    val fmt = if (now - ts < 24 * 60 * 60 * 1000) SimpleDateFormat("HH:mm", Locale.getDefault())
-    else SimpleDateFormat("MMM d", Locale.getDefault())
+    val fmt = if (System.currentTimeMillis() - ts < 24 * 60 * 60 * 1000) timeFmt.get()!! else dayFmt.get()!!
     return fmt.format(Date(ts))
 }

@@ -202,7 +202,7 @@ fun ThreadScreen(
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Text(
-                            SimpleDateFormat("EEE, MMM d HH:mm", Locale.getDefault()).format(Date(m.date)),
+                            threadDateFmt.get()!!.format(Date(m.date)),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -378,6 +378,8 @@ private fun MailBodyView(body: MailBody?, message: MessageEntity) {
         }
     }
 }
+
+private val threadDateFmt = ThreadLocal.withInitial { SimpleDateFormat("EEE, MMM d HH:mm", Locale.getDefault()) }
 
 private fun androidx.compose.ui.graphics.Color.toArgb(): Int =
     android.graphics.Color.argb(

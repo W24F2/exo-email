@@ -66,18 +66,7 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, inRepl
         androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
     ) { uri ->
         uri ?: return@rememberLauncherForActivityResult
-        val resolver = context.contentResolver
-        val name = run {
-            var n = "attachment"
-            resolver.query(uri, null, null, null, null)?.use { c ->
-                val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                if (i >= 0 && c.moveToFirst()) n = c.getString(i) ?: n
-            }
-            n
-        }
-        val mime = resolver.getType(uri) ?: "application/octet-stream"
-        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@rememberLauncherForActivityResult
-        vm.addAttachment(name, mime, bytes)
+        vm.addAttachment(context, uri)
     }
 
     var to by remember { mutableStateOf("") }

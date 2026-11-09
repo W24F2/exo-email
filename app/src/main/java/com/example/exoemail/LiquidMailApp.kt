@@ -1,4 +1,4 @@
-﻿package com.example.exoemail
+package com.example.exoemail
 
 import android.app.Application
 import android.os.StrictMode
@@ -41,7 +41,11 @@ class LiquidMailApp : Application() {
                 com.example.exoemail.data.DemoSeeder.seedIfEmpty(this@LiquidMailApp, database)
             }
         }
-        dedupeAccounts()
+        // One-off dedupe from older builds — almost always a no-op, so run it
+        // off the startup critical path instead of blocking onCreate. Room's
+        // query executor runs DB work on background threads; this just has to
+        // not hold up first-frame. A single daemon thread is enough.
+        Thread { dedupeAccounts() }.apply { isDaemon = true; start() }
         scheduleSync()
     }
 
