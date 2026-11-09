@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -52,10 +54,31 @@ import com.example.exoemail.ui.compose.ComposeViewModel
 import com.example.exoemail.ui.compose.ComposeViewModelFactory
 
 @Composable
-fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, onBack: () -> Unit) {
-    val vm: ComposeViewModel = viewModel(factory = ComposeViewModelFactory(app, draftId))
+fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, inReplyTo: String? = null, references: String? = null, subject: String? = null, quotedBody: String? = null, forward: Boolean = false, onBack: () -> Unit) {
+    val vm: ComposeViewModel = viewModel(factory = ComposeViewModelFactory(app, draftId, replyTo, inReplyTo, references, subject, quotedBody, forward))
     val state by vm.state.collectAsState()
     val draft by vm.draft.collectAsState()
+    val attachments by vm.attachments.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // File picker for attach-on-send.
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri ?: return@rememberLauncherForActivityResult
+        val resolver = context.contentResolver
+        val name = run {
+            var n = "attachment"
+            resolver.query(uri, null, null, null, null)?.use { c ->
+                val i = c.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (i >= 0 && c.moveToFirst()) n = c.getString(i) ?: n
+            }
+            n
+        }
+        val mime = resolver.getType(uri) ?: "application/octet-stream"
+        val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return@rememberLauncherForActivityResult
+        vm.addAttachment(name, mime, bytes)
+    }
 
     var to by remember { mutableStateOf("") }
     var cc by remember { mutableStateOf("") }
@@ -74,9 +97,9 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, onBack
             hydrated = true
         }
     }
-    // For replies (not drafts), prefill To
+    // For replies (not drafts/forwards), prefill To — forwards leave it empty.
     LaunchedEffect(replyTo) {
-        if (replyTo != null && to.isEmpty()) to = replyTo
+        if (replyTo != null && !forward && to.isEmpty()) to = replyTo
     }
 
     LaunchedEffect(state) {
@@ -104,6 +127,7 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, onBack
                 hasContent = hasContent,
                 onSend = { vm.send(to, cc, bcc, subject, body) },
                 onSaveDraft = { vm.saveDraft(to, subject, body) },
+                onAttach = { picker.launch(arrayOf("*/*")) },
             )
         },
     ) { padding ->
@@ -150,6 +174,40 @@ fun ComposeScreen(app: LiquidMailApp, replyTo: String?, draftId: String?, onBack
                 modifier = Modifier.fillMaxWidth(),
             )
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Staged attachments — removable chips.
+            if (attachments.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .horizontalScroll(rememberScrollState()),
+                ) {
+                    attachments.forEachIndexed { i, att ->
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(start = 10.dp),
+                            ) {
+                                Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(
+                                    " ${att.fileName}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 1,
+                                )
+                                IconButton(onClick = { vm.removeAttachment(i) }, modifier = Modifier.size(28.dp)) {
+                                    Icon(Icons.Filled.Close, contentDescription = "Remove", modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            }
 
             // Body — fills remaining space, comfortable text
             TextField(
@@ -243,6 +301,7 @@ private fun ComposeActionBar(
     hasContent: Boolean,
     onSend: () -> Unit,
     onSaveDraft: () -> Unit,
+    onAttach: () -> Unit,
 ) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -256,6 +315,12 @@ private fun ComposeActionBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            IconButton(onClick = onAttach, enabled = !sending) {
+                Icon(
+                    Icons.Filled.AttachFile, contentDescription = "Attach file",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             OutlinedButton(
                 onClick = onSaveDraft,
                 enabled = hasContent && !sending,

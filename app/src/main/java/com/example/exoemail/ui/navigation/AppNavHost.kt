@@ -68,6 +68,25 @@ fun AppNavHost(app: LiquidMailApp) {
         value = active?.email?.firstOrNull()?.uppercaseChar()?.toString() ?: ""
     }
 
+    // Live per-folder unread counts for dock badges (re-queries on message changes).
+    val activeAccountId by produceState<String?>(initialValue = null) {
+        val accounts = app.database.accountDao().observeAll().first()
+        value = app.settings.activeAccountId.first() ?: accounts.firstOrNull()?.id
+    }
+    val unreadByFolder by produceState<Map<String, Int>>(initialValue = emptyMap(), activeAccountId) {
+        val id = activeAccountId ?: return@produceState
+        app.database.messageDao().observeUnreadByFolder(id).collect { list ->
+            value = list.associate { it.folder to it.cnt }
+        }
+    }
+    // Map server folder names onto tab routes.
+    val tabUnread = mapOf(
+        "InboxRoute" to (unreadByFolder["INBOX"] ?: 0),
+        "StarredRoute" to (unreadByFolder["Starred"] ?: 0),
+        "SentRoute" to (unreadByFolder["Sent"] ?: 0),
+        "DraftsRoute" to (unreadByFolder["Drafts"] ?: 0),
+    )
+
     NavDisplay(
         backStack = backStack,
         onBack = back,
@@ -89,6 +108,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     InboxScreen(
                         app = app,
@@ -108,6 +128,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     StarredScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
@@ -122,6 +143,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     SentScreen(app = app, onOpenMessage = { navigate(ThreadRoute(it)) })
                 }
@@ -136,6 +158,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     DraftsScreen(app = app, onOpenDraft = { navigate(ComposeRoute(draftId = it)) })
                 }
@@ -150,6 +173,7 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     FoldersScreen(
                         app = app,
@@ -183,15 +207,20 @@ fun AppNavHost(app: LiquidMailApp) {
                     onAddAccount = { resetTo(OnboardingRoute) },
                     accountInitial = accountInitial,
                     onCompose = { navigate(ComposeRoute()) },
+                    unreadCounts = tabUnread,
                 ) {
                     AccountsScreen(app = app, onBack = back, onAddAccount = { navigate(OnboardingRoute) })
                 }
             }
             entry<ThreadRoute> { r ->
-                ThreadScreen(app = app, messageId = r.messageId, onBack = back, onReply = { navigate(ComposeRoute(replyTo = it)) })
+                ThreadScreen(
+                    app = app, messageId = r.messageId, onBack = back,
+                    onReply = { msg -> navigate(ComposeRoute(replyTo = msg.sender, messageId = msg.messageId, references = msg.references, subject = msg.subject, quotedBody = msg.body)) },
+                    onForward = { msg -> navigate(ComposeRoute(subject = msg.subject, quotedBody = msg.body, messageId = msg.messageId, references = msg.references, forward = true)) },
+                )
             }
             entry<ComposeRoute> { r ->
-                ComposeScreen(app = app, replyTo = r.replyTo, draftId = r.draftId, onBack = back)
+                ComposeScreen(app = app, replyTo = r.replyTo, draftId = r.draftId, inReplyTo = r.messageId, references = r.references, subject = r.subject, quotedBody = r.quotedBody, forward = r.forward, onBack = back)
             }
         }
     )

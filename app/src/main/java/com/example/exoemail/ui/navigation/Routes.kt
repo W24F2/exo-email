@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.navigation
+package com.example.exoemail.ui.navigation
 
 sealed interface Route
 data object OnboardingRoute : Route
@@ -16,5 +16,18 @@ data object SettingsRoute : Route
 // Pushed detail routes
 data class ThreadRoute(val messageId: String) : Route
 
-/** replyTo = sender address for replies; draftId = Room message id for draft resume. */
-data class ComposeRoute(val replyTo: String? = null, val draftId: String? = null) : Route
+/** replyTo = sender address for replies; draftId = Room message id for draft resume.
+ *  messageId = original message's Message-ID for In-Reply-To header.
+ *  references = References header chain for threading.
+ *  subject = original subject (for "Re:" prefix).
+ *  quotedBody = original message body for quoting. */
+data class ComposeRoute(
+    val replyTo: String? = null,
+    val draftId: String? = null,
+    val messageId: String? = null,
+    val references: String? = null,
+    val subject: String? = null,
+    val quotedBody: String? = null,
+    /** true = forward (Fwd: subject, empty To); false/null = reply. */
+    val forward: Boolean = false,
+) : Route

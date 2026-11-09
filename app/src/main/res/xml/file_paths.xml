@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Attachments downloaded from mail are cached here and shared read-only
+         with external viewers via FileProvider. -->
+    <cache-path name="attachments" path="attachments/" />
+    <files-path name="saved_attachments" path="attachments/" />
+</paths>

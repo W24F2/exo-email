@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.data.db
+package com.example.exoemail.data.db
 
 import androidx.room.Entity
 import androidx.room.Index
@@ -53,7 +53,14 @@ data class MessageEntity(
     val bodyPath: String?,
     /** Inline body for drafts (and optionally cached bodies later). Null for fetched mail. */
     val body: String? = null,
+    /** Local-only snooze: hidden from the inbox list until this epoch-ms passes. */
+    val snoozedUntil: Long? = null,
+    val messageId: String? = null,
+    val references: String? = null,
 )
+
+/** Projection for per-folder unread counts (dock badges). */
+data class FolderUnreadCount(val folder: String, val cnt: Int)
 
 @Entity(tableName = "attachments", primaryKeys = ["messageId", "idx"])
 data class AttachmentEntity(

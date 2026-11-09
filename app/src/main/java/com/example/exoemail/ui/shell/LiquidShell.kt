@@ -90,6 +90,8 @@ fun LiquidShell(
     onBack: (() -> Unit)? = null,
     /** Compose action — pushed as a detail route (not a tab switch). */
     onCompose: () -> Unit = {},
+    /** Per-tab unread badge counts, keyed by route class name (e.g. "InboxRoute"). */
+    unreadCounts: Map<String, Int> = emptyMap(),
     content: @Composable BoxScope.() -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
@@ -176,6 +178,7 @@ fun LiquidShell(
                 onCompose = onCompose,
                 showCompose = accountsExist,
                 haptics = haptics,
+                unreadCounts = unreadCounts,
             )
         }
 
@@ -200,6 +203,7 @@ private fun LiquidDock(
     onCompose: () -> Unit,
     showCompose: Boolean,
     haptics: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    unreadCounts: Map<String, Int>,
 ) {
     val shape = RoundedCornerShape(50)
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
@@ -242,6 +246,7 @@ private fun LiquidDock(
                 (tab.route is FoldersRoute && activeTab is FolderRoute)
             val tint = if (isSelected) MaterialTheme.colorScheme.primary
                        else MaterialTheme.colorScheme.onSurfaceVariant
+            val badge = unreadCounts[tab.route::class.simpleName] ?: 0
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
@@ -252,7 +257,17 @@ private fun LiquidDock(
                     }
                     .padding(horizontal = 10.dp, vertical = 6.dp),
             ) {
-                Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(20.dp))
+                androidx.compose.material3.BadgedBox(
+                    badge = {
+                        if (badge > 0) {
+                            androidx.compose.material3.Badge {
+                                Text(if (badge > 99) "99+" else badge.toString())
+                            }
+                        }
+                    },
+                ) {
+                    Icon(tab.icon, contentDescription = tab.label, tint = tint, modifier = Modifier.size(20.dp))
+                }
                 Text(tab.label, color = tint, style = MaterialTheme.typography.labelSmall)
             }
         }

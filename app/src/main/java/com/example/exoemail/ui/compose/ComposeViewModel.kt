@@ -1,4 +1,4 @@
-﻿package com.example.exoemail.ui.compose
+package com.example.exoemail.ui.compose
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -29,11 +29,19 @@ data class ComposeDraft(
     val bcc: String = "",
     val subject: String = "",
     val body: String = "",
+    val inReplyTo: String? = null,
+    val references: String? = null,
 )
 
 class ComposeViewModel(
     private val app: LiquidMailApp,
     private val draftId: String? = null,
+    private val replyTo: String? = null,
+    private val inReplyTo: String? = null,
+    private val references: String? = null,
+    private val replySubject: String? = null,
+    private val quotedBody: String? = null,
+    private val forward: Boolean = false,
     private val repo: MailRepository = MailRepository(app.database, MailEngineFactory.create()),
     private val credentials: CredentialStore = CredentialStore(app),
     private val engine: MailEngine = MailEngineFactory.create(),
@@ -44,6 +52,19 @@ class ComposeViewModel(
 
     private val _draft = MutableStateFlow<ComposeDraft?>(null)
     val draft: StateFlow<ComposeDraft?> = _draft
+
+    /** Files staged for send (multipart/mixed). */
+    private val _attachments = MutableStateFlow<List<com.example.exoemail.core.mail.OutgoingAttachment>>(emptyList())
+    val attachments: StateFlow<List<com.example.exoemail.core.mail.OutgoingAttachment>> = _attachments
+
+    fun addAttachment(fileName: String, mimeType: String, bytes: ByteArray) {
+        _attachments.value = _attachments.value +
+            com.example.exoemail.core.mail.OutgoingAttachment(fileName, mimeType, bytes)
+    }
+
+    fun removeAttachment(index: Int) {
+        _attachments.value = _attachments.value.filterIndexed { i, _ -> i != index }
+    }
 
     init {
         if (draftId != null) {
@@ -57,6 +78,23 @@ class ComposeViewModel(
                     )
                 }
             }
+        } else if (forward) {
+            // Forward: Fwd: subject, empty To, original body quoted below.
+            _draft.value = ComposeDraft(
+                to = "",
+                subject = replySubject?.let { if (it.startsWith("Fwd: ", true) || it.startsWith("Fw: ", true)) it else "Fwd: $it" } ?: "",
+                body = quotedBody?.let { "\n\n---------- Forwarded message ----------\n$it" } ?: "",
+                // Keep References so the forward threads where it belongs.
+                references = references,
+            )
+        } else if (replyTo != null) {
+            _draft.value = ComposeDraft(
+                to = replyTo,
+                subject = replySubject?.let { if (it.startsWith("Re: ", true)) it else "Re: $it" } ?: "",
+                body = quotedBody?.let { "\n\n---\nOriginal message:\n$it" } ?: "",
+                inReplyTo = inReplyTo,
+                references = references,
+            )
         }
     }
 
@@ -76,6 +114,7 @@ class ComposeViewModel(
             val toList = to.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val ccList = cc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             val bccList = bcc.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val currentDraft = _draft.value ?: ComposeDraft()
             engine.send(
                 repo.accountConfig(account, secret),
                 OutgoingMail(
@@ -84,6 +123,10 @@ class ComposeViewModel(
                     bcc = bccList,
                     subject = subject,
                     body = body,
+                    inReplyTo = currentDraft.inReplyTo,
+                    references = currentDraft.references,
+                    isHtml = false,
+                    attachments = _attachments.value,
                 ),
             ).onSuccess {
                 _state.value = ComposeState.Sent
@@ -124,7 +167,14 @@ class ComposeViewModel(
 class ComposeViewModelFactory(
     private val app: LiquidMailApp,
     private val draftId: String? = null,
+    private val replyTo: String? = null,
+    private val inReplyTo: String? = null,
+    private val references: String? = null,
+    private val replySubject: String? = null,
+    private val quotedBody: String? = null,
+    private val forward: Boolean = false,
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
-    override fun <T : ViewModel> create(modelClass: Class<T>): T = ComposeViewModel(app, draftId) as T
+    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+        ComposeViewModel(app, draftId, replyTo, inReplyTo, references, replySubject, quotedBody, forward) as T
 }

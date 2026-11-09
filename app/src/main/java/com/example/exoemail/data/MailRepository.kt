@@ -38,10 +38,11 @@ class MailRepository(
     suspend fun setStarred(id: String, starred: Boolean) = db.messageDao().setStarred(id, starred)
 
     suspend fun saveDraft(accountId: String, to: String, subject: String, body: String) {
-        val id = "${accountId}:Drafts:${System.currentTimeMillis()}"
+        val uid = -System.currentTimeMillis()
+        val id = "${accountId}:Drafts:$uid"
         db.messageDao().upsertAll(listOf(
             MessageEntity(
-                id = id, accountId = accountId, folder = "Drafts", uid = 0,
+                id = id, accountId = accountId, folder = "Drafts", uid = uid,
                 threadId = "", subject = subject, sender = "",
                 senderName = "Draft", recipients = to, date = System.currentTimeMillis(),
                 snippet = body.take(140), isRead = true, isStarred = false,

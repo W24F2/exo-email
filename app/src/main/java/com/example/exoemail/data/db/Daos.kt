@@ -51,8 +51,16 @@ interface FolderDao {
 
 @Dao
 interface MessageDao {
-    @Query("SELECT * FROM messages WHERE accountId = :accountId AND folder = :folder ORDER BY date DESC")
-    fun pagingFolder(accountId: String, folder: String): PagingSource<Int, MessageEntity>
+    /** Folder list. Snoozed messages stay hidden until their snooze time passes. */
+    @Query(
+        "SELECT * FROM messages WHERE accountId = :accountId AND folder = :folder " +
+            "AND (snoozedUntil IS NULL OR snoozedUntil <= :now) ORDER BY date DESC"
+    )
+    fun pagingFolder(
+        accountId: String,
+        folder: String,
+        now: Long = System.currentTimeMillis(),
+    ): PagingSource<Int, MessageEntity>
 
     @Query(
         "SELECT * FROM messages WHERE accountId = :accountId " +
@@ -78,6 +86,13 @@ interface MessageDao {
 
     @Query("UPDATE messages SET body = :body WHERE id = :id")
     suspend fun setBody(id: String, body: String)
+
+    @Query("UPDATE messages SET snoozedUntil = :until WHERE id = :id")
+    suspend fun setSnoozedUntil(id: String, until: Long?)
+
+    /** All messages sharing a conversation thread, oldest first. */
+    @Query("SELECT * FROM messages WHERE accountId = :accountId AND threadId = :threadId ORDER BY date ASC")
+    suspend fun conversation(accountId: String, threadId: String): List<MessageEntity>
 
     @Query("DELETE FROM messages WHERE id = :id")
     suspend fun delete(id: String)
@@ -105,12 +120,30 @@ interface MessageDao {
 
     @Query(
         "SELECT * FROM messages WHERE accountId = :accountId AND folder = 'INBOX' AND isRead = 0 " +
-            "ORDER BY date DESC"
+            "AND (snoozedUntil IS NULL OR snoozedUntil <= :now) ORDER BY date DESC"
     )
-    fun pagingUnread(accountId: String): PagingSource<Int, MessageEntity>
+    fun pagingUnread(accountId: String, now: Long = System.currentTimeMillis()): PagingSource<Int, MessageEntity>
 
     @Query("UPDATE messages SET folder = :folder WHERE id = :id")
     suspend fun moveTo(id: String, folder: String)
+
+    @Query(
+        "SELECT COUNT(*) FROM messages WHERE accountId = :accountId AND folder = 'INBOX' AND isRead = 0 " +
+            "AND (snoozedUntil IS NULL OR snoozedUntil <= :now)"
+    )
+    fun observeUnreadInboxCount(accountId: String, now: Long = System.currentTimeMillis()): Flow<Int>
+
+    @Query(
+        "SELECT COUNT(*) FROM messages WHERE accountId = :accountId AND folder = 'INBOX' AND isRead = 0 " +
+            "AND (snoozedUntil IS NULL OR snoozedUntil <= :now)"
+    )
+    suspend fun unreadInboxCount(accountId: String, now: Long = System.currentTimeMillis()): Int
+
+    @Query(
+        "SELECT folder, COUNT(*) AS cnt FROM messages WHERE accountId = :accountId AND isRead = 0 " +
+            "AND (snoozedUntil IS NULL OR snoozedUntil <= :now) GROUP BY folder"
+    )
+    fun observeUnreadByFolder(accountId: String, now: Long = System.currentTimeMillis()): Flow<List<FolderUnreadCount>>
 
     @Query("DELETE FROM messages WHERE accountId = :accountId")
     suspend fun deleteForAccount(accountId: String)
