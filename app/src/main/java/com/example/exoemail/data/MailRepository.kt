@@ -129,9 +129,23 @@ class MailRepository(
             .remoteOrSuccess()
     }
 
-    /** Send a draft from [account]. Caller supplies the account it already resolved. */
+    /** Send a draft from [account]. Caller supplies the account it already resolved.
+     *  Records the sent copy in Room (Sent folder) on success. */
     suspend fun send(account: AccountEntity, draft: OutgoingMail): Result<Unit> = runCatching {
         engine.send(requireConfig(account), draft).getOrThrow()
+        // Record the sent copy locally so Sent tab shows it immediately.
+        val sentId = "${account.id}:Sent:${System.currentTimeMillis()}"
+        db.messageDao().upsertAll(listOf(
+            MessageEntity(
+                id = sentId, accountId = account.id, folder = "Sent", uid = 0,
+                threadId = draft.references ?: draft.inReplyTo ?: "",
+                subject = draft.subject, sender = account.email,
+                senderName = account.displayName, recipients = draft.to.joinToString(", "),
+                date = System.currentTimeMillis(), snippet = draft.body.take(140),
+                isRead = true, isStarred = false, hasAttachments = draft.attachments.isNotEmpty(),
+                isDraft = false, bodyPath = null, body = draft.body,
+            )
+        ))
     }
 
     /** Sync INBOX envelopes since the last known UID and upsert into Room. */
@@ -145,12 +159,14 @@ class MailRepository(
         val fetched = engine.fetchMessages(config, "INBOX", sinceUid = sinceUid, limit = 50)
             .getOrThrow()
         val entities = fetched.map { m ->
+            // threadId = root of References chain (first Message-ID), else own Message-ID
+            val threadRoot = m.references?.split(" ")?.firstOrNull() ?: m.messageId ?: "${account.id}:${m.uid}"
             MessageEntity(
                 id = "${account.id}:INBOX:${m.uid}",
                 accountId = account.id,
                 folder = "INBOX",
                 uid = m.uid,
-                threadId = m.messageId ?: "${account.id}:${m.uid}",
+                threadId = threadRoot,
                 subject = m.subject,
                 sender = m.sender,
                 senderName = m.senderName,

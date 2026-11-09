@@ -144,20 +144,6 @@ class ComposeViewModel(
                 _state.value = ComposeState.Sent
                 // Remove draft if this was one
                 draftId?.let { runCatching { repo.deleteMessage(it) } }
-                // also save to Sent folder locally so Sent tab shows it
-                runCatching {
-                    val id = "${account.id}:Sent:${System.currentTimeMillis()}"
-                    app.database.messageDao().upsertAll(listOf(
-                        MessageEntity(
-                            id = id, accountId = account.id, folder = "Sent", uid = 0,
-                            threadId = "", subject = subject, sender = account.email,
-                            senderName = account.displayName, recipients = to,
-                            date = System.currentTimeMillis(), snippet = body.take(140),
-                            isRead = true, isStarred = false, hasAttachments = false,
-                            isDraft = false, bodyPath = null, body = body,
-                        )
-                    ))
-                }
             }
                 .onFailure { _state.value = ComposeState.Error(it.message ?: "Send failed") }
         }

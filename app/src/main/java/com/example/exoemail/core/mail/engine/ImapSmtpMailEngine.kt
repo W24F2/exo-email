@@ -102,7 +102,7 @@ class ImapSmtpMailEngine : MailEngine {
                     else f.getMessages(maxOf(1, count - limit + 1), count).toList()
                 }
                 val batch = uids.takeLast(limit)
-                // Envelope-only prefetch: headers, flags, sizes. NEVER bodies â€”
+                // Envelope-only prefetch: headers, flags, sizes, and References for threading.
                 // downloading bodies here is what timed out big Gmail inboxes.
                 if (batch.isNotEmpty()) {
                     val fp = FetchProfile().apply {
@@ -110,7 +110,14 @@ class ImapSmtpMailEngine : MailEngine {
                         add(FetchProfile.Item.FLAGS)
                         add(FetchProfile.Item.CONTENT_INFO)
                     }
-                    f.fetch(batch.toTypedArray(), fp)
+                    // References is not in FetchProfile.Item — fetch it explicitly.
+                    val fpWithRefs = FetchProfile().also {
+                        it.add(FetchProfile.Item.ENVELOPE)
+                        it.add(FetchProfile.Item.FLAGS)
+                        it.add(FetchProfile.Item.CONTENT_INFO)
+                        it.add("References")
+                    }
+                    f.fetch(batch.toTypedArray(), fpWithRefs)
                 }
                 batch.map { it.toMailMessage(f as? jakarta.mail.UIDFolder) }
                     .sortedByDescending { it.date }
@@ -316,6 +323,7 @@ class ImapSmtpMailEngine : MailEngine {
             isRead = flags.contains(Flags.Flag.SEEN),
             isStarred = flags.contains(Flags.Flag.FLAGGED),
             hasAttachments = hasAttachmentsFromHeaders(),
+            references = runCatching { getHeader("References")?.firstOrNull()?.trim() }.getOrNull(),
         )
     }
 

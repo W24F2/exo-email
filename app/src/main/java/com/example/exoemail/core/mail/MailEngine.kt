@@ -14,6 +14,8 @@ data class MailMessage(
     val isRead: Boolean,
     val isStarred: Boolean,
     val hasAttachments: Boolean,
+    /** Raw References header (space-separated Message-IDs in thread order). */
+    val references: String? = null,
 )
 
 data class MailBody(

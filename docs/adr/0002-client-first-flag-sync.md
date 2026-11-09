@@ -13,7 +13,7 @@ UI actions now do **optimistic local write → best-effort server call**:
   `engine.markRead`/`engine.setStarred` inside `runCatching` (failures are silent — the
   next sync reconciles).
 - `uid=0` rows (drafts, sent copies) skip the server call entirely.
-- Archive/Delete remain unimplemented (no IMAP MOVE/EXPUNGE yet).
+- Archive/Delete use the same contract: optimistic Room write → best-effort IMAP move/expunge. Failures are silent; the next sync reconciles. `uid=0` (local-only) rows skip the server call entirely.
 
 ## Consequences
 - Star/read now persist across syncs *and* propagate to other clients (best-effort).
