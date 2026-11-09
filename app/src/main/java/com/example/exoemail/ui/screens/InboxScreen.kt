@@ -51,7 +51,10 @@ import com.example.exoemail.LiquidMailApp
 import com.example.exoemail.ui.inbox.InboxFilter
 import com.example.exoemail.ui.inbox.InboxViewModel
 import com.example.exoemail.ui.inbox.InboxViewModelFactory
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
 
@@ -320,10 +323,12 @@ internal fun InboxRow(
     }
 }
 
-private val timeFmt = ThreadLocal.withInitial { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-private val dayFmt = ThreadLocal.withInitial { SimpleDateFormat("MMM d", Locale.getDefault()) }
+private val timeFmt = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+private val dayFmt = DateTimeFormatter.ofPattern("MMM d", Locale.getDefault())
 
 private fun formatDate(ts: Long): String {
-    val fmt = if (System.currentTimeMillis() - ts < 24 * 60 * 60 * 1000) timeFmt.get()!! else dayFmt.get()!!
-    return fmt.format(Date(ts))
+    val ldt = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(ts), ZoneId.systemDefault())
+    val fmt = if (java.time.Instant.now().minus(ts, ChronoUnit.MILLIS).isAfter(java.time.Instant.EPOCH) // never true, use duration
+        && java.time.Duration.between(java.time.Instant.ofEpochMilli(ts), java.time.Instant.now()).toHours() < 24) timeFmt else dayFmt
+    return ldt.format(fmt)
 }

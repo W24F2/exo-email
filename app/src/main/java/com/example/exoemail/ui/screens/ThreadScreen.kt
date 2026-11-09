@@ -53,7 +53,9 @@ import com.example.exoemail.ui.components.GlassButton
 import com.example.exoemail.ui.components.GlassTopBar
 import com.example.exoemail.ui.thread.ThreadViewModel
 import com.example.exoemail.ui.thread.ThreadViewModelFactory
-import java.text.SimpleDateFormat
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 
@@ -202,7 +204,8 @@ fun ThreadScreen(
                             style = MaterialTheme.typography.bodySmall,
                         )
                         Text(
-                            threadDateFmt.get()!!.format(Date(m.date)),
+                            LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(m.date), ZoneId.systemDefault())
+                                .format(threadDateFmt),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodySmall,
                         )
@@ -379,7 +382,7 @@ private fun MailBodyView(body: MailBody?, message: MessageEntity) {
     }
 }
 
-private val threadDateFmt = ThreadLocal.withInitial { SimpleDateFormat("EEE, MMM d HH:mm", Locale.getDefault()) }
+private val threadDateFmt = DateTimeFormatter.ofPattern("EEE, MMM d HH:mm", Locale.getDefault())
 
 private fun androidx.compose.ui.graphics.Color.toArgb(): Int =
     android.graphics.Color.argb(

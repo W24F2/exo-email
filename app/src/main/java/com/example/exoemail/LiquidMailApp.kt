@@ -11,6 +11,9 @@ import com.example.exoemail.data.db.AppDatabase
 import com.example.exoemail.data.settings.SettingsRepository
 import com.example.exoemail.sync.MailSyncWorker
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class LiquidMailApp : Application() {
 
@@ -37,15 +40,15 @@ class LiquidMailApp : Application() {
         database = AppDatabase.create(this)
         settings = SettingsRepository(this)
         if (BuildConfig.DEBUG) {
-            kotlinx.coroutines.runBlocking {
+            // DemoSeeder does DB writes; Room runs on background executor.
+            // Launch on IO instead of runBlocking to avoid blocking onCreate.
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 com.example.exoemail.data.DemoSeeder.seedIfEmpty(this@LiquidMailApp, database)
             }
         }
-        // One-off dedupe from older builds — almost always a no-op, so run it
-        // off the startup critical path instead of blocking onCreate. Room's
-        // query executor runs DB work on background threads; this just has to
-        // not hold up first-frame. A single daemon thread is enough.
-        Thread { dedupeAccounts() }.apply { isDaemon = true; start() }
+        // One-off dedupe from older builds — almost always a no-op. Room's
+        // query executor runs DB work on background threads; just launch on IO.
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch { dedupeAccounts() }
         scheduleSync()
     }
 
@@ -56,22 +59,20 @@ class LiquidMailApp : Application() {
      * account that actually has a credential (fall back to most-recently-synced)
      * and drop the orphan's rows; the next sync repopulates under the keeper.
      */
-    private fun dedupeAccounts() {
-        kotlinx.coroutines.runBlocking {
-            val accounts = database.accountDao().all()
-            val byEmail = accounts.groupBy { it.email.lowercase() }.filterValues { it.size > 1 }
-            if (byEmail.isEmpty()) return@runBlocking
-            val credentials = com.example.exoemail.core.security.CredentialStore(this@LiquidMailApp)
-            for ((_, group) in byEmail) {
-                val keeper = group.firstOrNull { runCatching { credentials.get(it.id) }.getOrNull() != null }
-                    ?: group.maxByOrNull { it.lastSyncAt }
-                    ?: continue
-                for (loser in group.filter { it.id != keeper.id }) {
-                    database.messageDao().deleteForAccount(loser.id)
-                    database.folderDao().deleteForAccount(loser.id)
-                    database.attachmentDao().deleteForAccount(loser.id)
-                    database.accountDao().delete(loser.id)
-                }
+    private suspend fun dedupeAccounts() {
+        val accounts = database.accountDao().all()
+        val byEmail = accounts.groupBy { it.email.lowercase() }.filterValues { it.size > 1 }
+        if (byEmail.isEmpty()) return
+        val credentials = com.example.exoemail.core.security.CredentialStore(this@LiquidMailApp)
+        for ((_, group) in byEmail) {
+            val keeper = group.firstOrNull { runCatching { credentials.get(it.id) }.getOrNull() != null }
+                ?: group.maxByOrNull { it.lastSyncAt }
+                ?: continue
+            for (loser in group.filter { it.id != keeper.id }) {
+                database.messageDao().deleteForAccount(loser.id)
+                database.folderDao().deleteForAccount(loser.id)
+                database.attachmentDao().deleteForAccount(loser.id)
+                database.accountDao().delete(loser.id)
             }
         }
     }
